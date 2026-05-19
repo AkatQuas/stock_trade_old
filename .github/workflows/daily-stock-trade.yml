@@ -2,8 +2,8 @@ name: Daily Stock Trade
 
 on:
   schedule:
-    # Runs at 17:00 UTC+8 (09:00 UTC) every day
-    - cron: '0 9 * * *'
+    # Runs at 17:00 UTC+8 (09:00 UTC) Sunday through Thursday
+    - cron: '0 9 * * 0-4'
   workflow_dispatch:
 
 jobs:
