@@ -43,9 +43,7 @@ def _get_kline_tushare(code: str, start: str, end: str) -> pd.DataFrame:
     if df is None or df.empty:
         return pd.DataFrame()
 
-    df = df.rename(columns={"trade_date": "date", "vol": "volume"})[
-        COLUMNS
-    ].copy()
+    df = df.rename(columns={"trade_date": "date", "vol": "volume"})[COLUMNS].copy()
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
     for c in ["open", "high", "low", "close", "pct_chg"]:
         df[c] = pd.to_numeric(df[c], errors="coerce")
@@ -70,20 +68,15 @@ def fetch_one_data(
             new_df = _get_kline_tushare(code, start, end)
             if new_df.empty:
                 logger.debug("%s 无数据，生成空表。", code)
-                new_df = pd.DataFrame(
-                    columns=COLUMNS
-                )
-            new_df = validate(new_df)
-            return new_df
+                new_df = pd.DataFrame(columns=COLUMNS)
+            return validate(new_df)
         except Exception as e:
             if looks_like_ip_ban(e):
                 logger.error(f"{code} 第 {attempt} 次抓取疑似被封禁，沉睡")
                 cool_sleep()
             else:
                 silent_seconds = 15 * attempt
-                logger.info(
-                    f"{code} 第 {attempt} 次抓取失败: {e}. \n{silent_seconds} 秒后重试"
-                )
+                logger.info(f"{code} 第 {attempt} 次抓取失败: {e}. \n{silent_seconds} 秒后重试")
                 time.sleep(silent_seconds)
     else:
         return None

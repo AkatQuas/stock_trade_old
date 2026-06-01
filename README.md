@@ -43,16 +43,44 @@
 
 ### 环境与依赖
 
+本项目为 **uv 标准布局**（`src/stock_trade_z` 可安装包 + `pyproject.toml` + `uv.lock`）。
+
 ```bash
-# 进入你的项目目录
-cd /path/to/your/project
-
-# 创建 virtual env
-uv venv
-
-# 安装依赖
-uv sync
+cd /path/to/stock_trade_z
+uv sync          # 创建 .venv 并安装依赖 + 可编辑安装本包
+uv sync --group dev   # 含 ruff（lint + format）
 ```
+
+**代码检查与格式化（[Ruff](https://docs.astral.sh/ruff/)）：**
+
+```bash
+uv run ruff check .              # 静态检查
+uv run ruff check --fix .        # 自动修复可修复项
+uv run ruff format .             # 格式化
+uv run ruff format --check .     # CI 用：仅检查格式是否一致
+```
+
+VS Code/Cursor：安装 [Ruff 扩展](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff)，本项目 `.vscode/settings.json` 已配置保存时格式化与 import 整理。
+
+**Git pre-commit（提交前自动检查）：**
+
+```bash
+uv sync --group dev
+uv run pre-commit install          # 安装 hooks 到 .git/hooks（每台机器执行一次）
+uv run pre-commit run --all-files  # 手动全量跑一遍
+```
+
+每次 `git commit` 会自动执行：尾随空格/EOF、YAML 检查、Ruff lint（含 `--fix`）与 Ruff format。配置见 [`.pre-commit-config.yaml`](./.pre-commit-config.yaml)。
+
+**CLI 入口（`uv run` 后可直接调用）：**
+
+| 命令 | 说明 |
+|------|------|
+| `stock-fetch-list` | 拉取全市场股票列表 |
+| `stock-fetch-kline` | 下载日线 K 线 CSV |
+| `stock-select` | 批量选股 |
+| `stock-detect-risk` | 批量风险检测 |
+| `stock-check` | 单只股票战法检查 |
 
 > 关键依赖：`pandas`, `tqdm`, `tushare`, `baostock`, `numpy`, `scipy`。
 
@@ -126,9 +154,7 @@ python src/stock_trade_z/fetch_kline.py \
 批量对股票池执行选股策略，输出符合条件的股票。
 
 ```bash
-python src/stock_trade_z/select_stock.py \
-  --data-dir ./data \
-  --date 2025-09-10
+uv run stock-select --data-dir ./data --date 2025-09-10
 ```
 
 > `--date` 可省略，默认取数据中的最后交易日。
@@ -406,17 +432,19 @@ python src/stock_trade_z/update_to_goodlist.py \
 │  ├── update_to_goodlist.py             # 添加股票到优选列表
 │  ├── sort_csv.py                    # 排序股票列表 CSV 文件
 │  ├── try_play.py                    # 测试脚本
-│  ├── find_stock_by_j.py             # 按 J 值查找股票
-│  ├── find_stock_by_price_concurrent.py  # 按价格并发查找股票
 │  ├── add_xueqiu_urls.py             # 添加雪球链接
 │  │
-│  ├── selector.config.json           # 选择器参数配置文件
+│  ├── selector.config.json           # 选股策略（selectors + quant_selectors）
+│  ├── risk.config.json               # 风险检测策略
 │  ├── stocklist.total.csv            # 全量股票池（5000+ 只）
 │  │
 │  └── lib/                           # 内部工具库
 │     ├── __init__.py
 │     ├── ts_pro_api.py               # Tushare API 封装
-│     ├── selector.py                 # 策略实现（各类战法选择器）
+│     ├── selector.py                 # Z 哥战法选择器
+│     ├── quant_selectors.py          # 主流量化选股策略
+│     ├── risk_selectors.py           # 风险检测选择器
+│     ├── registry.py                 # JSON 配置加载公共逻辑
 │     ├── fetch_data.py               # 数据抓取工具
 │     ├── load_data.py                # 数据加载工具
 │     ├── load_selector.py            # 选择器加载工具
@@ -431,30 +459,50 @@ python src/stock_trade_z/update_to_goodlist.py \
 ├── data/                             # K 线行情 CSV 输出目录
 ├── stocklist.good.csv                # 优选股票池（经过初步筛选）
 ├── .env.example                      # 环境变量配置示例
-├── .gitignore                        # Git 忽略文件配置
-├── requirements.txt                  # Python 依赖包列表
-├── fetch.log                         # 抓取日志
-└── select.log                        # 选股日志
+├── pyproject.toml                    # 项目与 uv 依赖
+├── uv.lock                           # 锁定依赖版本
+└── log/                              # 运行日志
 ```
+
+---
+
+## 选股机制（`select_stock.py`）
+
+1. **`load_data_folder`**：从 `--data-dir` 读取每只股票的 CSV，归一化 `date`，确定交易日。
+2. **`load_selectors`**：读取 `selector.config.json` 中的 `selectors`（Z 战法）与 `quant_selectors`（主流量化策略），按 `class` 动态实例化并全部运行。
+3. **并行扫描**：每个 Selector 对全市场调用 `select(date, data)`，内部用 `parallel_select_helper` 多进程执行 `_passes_filters(hist)`。
+4. **结果汇总**：命中代码与 `stocklist.total.csv` 合并名称/雪球链接，写日志；`--send-lark` 时推送飞书卡片。
+
+新增 **quant_selectors**（`lib/quant_selectors.py`，可在配置中 `activate: false` 关闭）：
+
+| 别名 | 类 | 思路 |
+|------|-----|------|
+| 动量因子 | `MomentumSelector` | ROC + 价格在 MA 上方 |
+| MACD金叉 | `MACDGoldenCrossSelector` | DIF 上穿 DEA，柱状线走强 |
+| 布林均值回归 | `BollingerMeanReversionSelector` | 触及下轨 + RSI 超卖 |
+| 唐奇安突破 | `DonchianBreakoutSelector` | N 日高点突破 + 放量 |
+| 双均线金叉 | `DualMAGoldenCrossSelector` | 短均线上穿长均线 |
 
 ---
 
 ## Risk Selectors (风险检测)
 
-用于识别潜在风险/异常行情的 "风险选择器"（位于 `src/stock_trade_z/lib/risk_selectors.py`）。当前实现的四个检测器：
+风险检测由 **`risk.config.json`** 驱动（`load_risk_selectors`），实现位于 `lib/risk_selectors.py`：
 
-- **ATR Volatility Selector**：基于 ATR（平均真实波幅）与当前价格的比值，标记相对波动率过高的个股。
-- **RSI Extremes Selector**：检测 RSI 极端值（超买或超卖），用于发现短期失衡的品种。
-- **MA Decline Selector**：短期均线低于长期均线且长期均线斜率为负，表明中长期走弱。
-- **Volume Selloff Selector**：当日成交量显著放大且伴随价格下跌，常见于被抛售的品种。
-
-运行示例：
+- **ATR Volatility**：相对波动率过高
+- **RSI Extremes**：超买/超卖极端
+- **MA Decline**：均线空头排列且长期均线走弱
+- **Volume Selloff**：放量下跌
+- **Drawdown**：相对近期高点回撤过大
+- **Gap Down**：跳空低开
+- **MACD Bearish**：MACD 死叉或空头动能
+- **Top Trap**：CCI 超买 + 顶部陷阱信号
 
 ```bash
-.venv/bin/python src/stock_trade_z/detect_risk.py --data-dir ./data
+uv run stock-detect-risk --data-dir ./data
 ```
 
-输出会列出每个选择器的命中列表，并给出一个按命中次数排序的聚合风险汇总。
+输出按命中风险条数聚合排序。
 
 ---
 

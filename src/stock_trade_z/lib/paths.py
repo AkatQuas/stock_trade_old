@@ -4,9 +4,7 @@ from pathlib import Path
 def get_script_parent_folder_path():
     script_path = Path(__file__).resolve()
 
-    parent_folder = script_path.parent.parent
-
-    return parent_folder
+    return script_path.parent.parent
 
 
 def get_file_in_pack(*path_segments: str | Path) -> Path:
@@ -14,9 +12,7 @@ def get_file_in_pack(*path_segments: str | Path) -> Path:
     for segment in path_segments:
         combined_path = combined_path / segment
 
-    resolved_absolute_path = combined_path.resolve()
-
-    return resolved_absolute_path
+    return combined_path.resolve()
 
 
 if __name__ == "__main__":

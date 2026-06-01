@@ -8,11 +8,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import pandas as pd
-from lib.fetch_data import fetch_one_data
-from lib.load_stocklist import StockCodeDict, load_stock_from_file
-from lib.logger import get_logger
-from lib.utils import ensure_folder, random_sleep_50_to_150ms, sleep_progress
 from tqdm import tqdm
+
+from stock_trade_z.lib.fetch_data import fetch_one_data
+from stock_trade_z.lib.load_stocklist import StockCodeDict, load_stock_from_file
+from stock_trade_z.lib.logger import get_logger
+from stock_trade_z.lib.utils import ensure_folder, random_sleep_50_to_150ms, sleep_progress
 
 warnings.filterwarnings("ignore")
 
@@ -43,9 +44,7 @@ def main():
         description="从 stocklist.csv 读取股票池并用 Tushare 抓取日线K线（固定qfq，全量覆盖）"
     )
     # 抓取范围
-    parser.add_argument(
-        "--start", default="20250101", help="起始日期 YYYYMMDD 或 'today'"
-    )
+    parser.add_argument("--start", default="20250101", help="起始日期 YYYYMMDD 或 'today'")
     parser.add_argument("--end", default="today", help="结束日期 YYYYMMDD 或 'today'")
     # 股票清单与板块过滤
     parser.add_argument(
@@ -88,16 +87,8 @@ def main():
     # ---------- Tushare Token ---------- #
 
     # ---------- 日期解析 ---------- #
-    start = (
-        dt.date.today().strftime("%Y%m%d")
-        if str(args.start).lower() == "today"
-        else args.start
-    )
-    end = (
-        dt.date.today().strftime("%Y%m%d")
-        if str(args.end).lower() == "today"
-        else args.end
-    )
+    start = dt.date.today().strftime("%Y%m%d") if str(args.start).lower() == "today" else args.start
+    end = dt.date.today().strftime("%Y%m%d") if str(args.end).lower() == "today" else args.end
 
     out_dir = ensure_folder(args.out)
 
@@ -110,9 +101,7 @@ def main():
     )
 
     chunk_size = args.chunk
-    chunk_list = [
-        stock_list[i : i + chunk_size] for i in range(0, len(stock_list), chunk_size)
-    ]
+    chunk_list = [stock_list[i : i + chunk_size] for i in range(0, len(stock_list), chunk_size)]
     logger.info("== 一共有 %s 个 chunk 任务 ==", len(chunk_list))
     # ---------- 多线程抓取（全量覆盖） ---------- #
     with ThreadPoolExecutor(max_workers=args.workers) as executor:

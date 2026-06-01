@@ -3,10 +3,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import tushare as ts
-from lib.bao_stock_client import BSClient
-from lib.load_stocklist import load_stock_from_file_in_df
-from lib.selector import compute_cci14_cci84, compute_pit_and_trap
-from lib.ts_pro_api import get_pro_api
+
+from stock_trade_z.lib.bao_stock_client import BSClient
+from stock_trade_z.lib.compute import compute_cci14_cci84, compute_pit_and_trap
+from stock_trade_z.lib.load_stocklist import load_stock_from_file_in_df
+from stock_trade_z.lib.ts_pro_api import get_pro_api
 
 if __name__ == "__main__":
     arr = np.array([[0, 1, 2, 3, 4], [5, 6, 7, 8, 9], [10, 11, 12, 13, 14]])
@@ -16,7 +17,6 @@ if __name__ == "__main__":
     x = np.linspace(0, 2 * np.pi, 100)  # useful to evaluate function at lots of points
     f = np.sin(x)
     print(x, f)
-    pass
     # api = get_pro_api()
     # df = ts.pro_bar(
     #     ts_code="002549.SZ",

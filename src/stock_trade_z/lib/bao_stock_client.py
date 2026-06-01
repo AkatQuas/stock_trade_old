@@ -1,6 +1,7 @@
 """
 http://www.baostock.com/mainContent?file=stockKData.md
 """
+
 import time
 
 import baostock as bs
@@ -30,11 +31,10 @@ class BSClient:
 
         self._lg = bs.login()
 
-        if self._lg.error_code == '0':
+        if self._lg.error_code == "0":
             self.is_logged_in = True
             return True
-        else:
-            raise RuntimeError(f"登录失败: {self._lg.error_msg}")
+        raise RuntimeError(f"登录失败: {self._lg.error_msg}")
 
     def logout(self):
         """登出baostock"""
@@ -54,7 +54,9 @@ class BSClient:
 
     # ============ 数据获取方法 ============
 
-    def get_kline_baostock(self, code: str, start: str, end: str | None = None) -> pd.DataFrame | None:
+    def get_kline_baostock(
+        self, code: str, start: str, end: str | None = None
+    ) -> pd.DataFrame | None:
         """
         下载股票数据
 
@@ -66,28 +68,24 @@ class BSClient:
         返回:
             DataFrame: 股票数据，失败返回None
         """
-        if not self.is_logged_in:
-            if not self.login():
-                return None
+        if not self.is_logged_in and not self.login():
+            return None
 
         bs_code = code2bs_code(code)
         # fields = "date,open,high,low,close,preclose,volume,amount,adjustflag,turn,pctChg",
         fields = "date,open,close,high,low,volume,amount,turn,pctChg"
-        rs = bs.query_history_k_data_plus(bs_code,
-        fields,
-        start_date=start, end_date=end,
-        frequency="d", adjustflag="2")
+        rs = bs.query_history_k_data_plus(
+            bs_code, fields, start_date=start, end_date=end, frequency="d", adjustflag="2"
+        )
         if rs is None:
             return None
 
         data_list = []
-        while (rs.error_code == '0') & rs.next():
+        while (rs.error_code == "0") & rs.next():
             # 获取一条记录，将记录合并在一起
             data_list.append(rs.get_row_data())
         df = pd.DataFrame(data_list, columns=rs.fields)
-        df = df.rename(columns={"pctChg": "pct_chg"})[
-            COLUMNS
-        ].copy()
+        df = df.rename(columns={"pctChg": "pct_chg"})[COLUMNS].copy()
         df["date"] = pd.to_datetime(df["date"], errors="coerce")
         for c in ["open", "high", "low", "close", "turn", "pct_chg"]:
             df[c] = pd.to_numeric(df[c], errors="coerce").round(2)
@@ -97,18 +95,12 @@ class BSClient:
         df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0).round(2)
         return df.sort_values("date").reset_index(drop=True)
 
-    def fetch_one_data(
-            self,
-            code:str,
-            start: str,
-            end: str | None = None
-    ) -> pd.DataFrame | None:
+    def fetch_one_data(self, code: str, start: str, end: str | None = None) -> pd.DataFrame | None:
         """
         @deprecated
         """
-        if not self.is_logged_in:
-            if not self.login():
-                return None
+        if not self.is_logged_in and not self.login():
+            return None
 
         logger = get_logger("fetch")
         for attempt in range(1, 4):
@@ -116,16 +108,11 @@ class BSClient:
                 new_df = self.get_kline_baostock(code, start, end)
                 if new_df is None:
                     logger.debug("%s 无数据，生成空表。", code)
-                    new_df = pd.DataFrame(
-                        columns=COLUMNS
-                    )
-                new_df = validate(new_df)
-                return new_df
+                    new_df = pd.DataFrame(columns=COLUMNS)
+                return validate(new_df)
             except Exception as e:
                 silent_seconds = 15 * attempt
-                logger.info(
-                    f"{code} 第 {attempt} 次抓取失败: {e}. \n{silent_seconds} 秒后重试"
-                )
+                logger.info(f"{code} 第 {attempt} 次抓取失败: {e}. \n{silent_seconds} 秒后重试")
                 time.sleep(silent_seconds)
         else:
             return None
@@ -183,5 +170,4 @@ class BSClient:
         df = df.rename(columns={"code_name": "name"})
         df.drop(columns=["code", "updateDate"], inplace=True)
         print(df.head())
-        df = df[["ts_code", "symbol", "name"]]
-        return df
+        return df[["ts_code", "symbol", "name"]]

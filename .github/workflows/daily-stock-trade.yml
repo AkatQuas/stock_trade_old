@@ -32,12 +32,12 @@ jobs:
 
       - name: Fetch stock data
         run: |
-          uv run python src/stock_trade_z/fetch_kline.py --start 20240101 --stocklist ./stocklist.good.csv --out ./data
+          uv run stock-fetch-kline --start 20240101 --stocklist ./stocklist.good.csv --out ./data
 
       - name: Select potential stock
         run: |
-          uv run python src/stock_trade_z/select_stock.py --data-dir ./data --send-lark
+          uv run stock-select --data-dir ./data --send-lark
 
-      # - name: Detect risk stock
-      #   run: |
-      #     uv run python src/stock_trade_z/detect_risk.py --data-dir ./data --send-lark
+      - name: Detect risk stock
+        run: |
+          uv run stock-detect-risk --data-dir ./data --send-lark

@@ -1,6 +1,7 @@
 import multiprocessing
 import os
-from typing import Any, Iterable, List, Optional, Tuple
+from collections.abc import Iterable
+from typing import Any
 
 # A small helper to run selector._passes_filters in parallel across codes.
 # Each worker process receives the selector object via initializer (pickled),
@@ -8,12 +9,13 @@ from typing import Any, Iterable, List, Optional, Tuple
 
 _GLOBAL_SELECTOR = None
 
+
 def _init_worker(selector: Any) -> None:
     global _GLOBAL_SELECTOR
     _GLOBAL_SELECTOR = selector
 
 
-def _worker_task(item: Tuple[str, Any]) -> Optional[str]:
+def _worker_task(item: tuple[str, Any]) -> str | None:
     global _GLOBAL_SELECTOR
     code, hist = item
     try:
@@ -26,7 +28,12 @@ def _worker_task(item: Tuple[str, Any]) -> Optional[str]:
         return None
 
 
-def parallel_select_helper(selector: Any, task_list: Iterable[Tuple[str, Any]], processes: Optional[int] = None, chunksize: int = 1) -> List[str]:
+def parallel_select_helper(
+    selector: Any,
+    task_list: Iterable[tuple[str, Any]],
+    processes: int | None = None,
+    chunksize: int = 1,
+) -> list[str]:
     """Run selector._passes_filters(hist) in parallel for given (code, hist) tasks.
 
     - selector: object that exposes `_passes_filters(hist)`
@@ -41,7 +48,9 @@ def parallel_select_helper(selector: Any, task_list: Iterable[Tuple[str, Any]], 
     procs = int(processes) if processes else (os.cpu_count() or 2)
 
     try:
-        with multiprocessing.Pool(processes=procs, initializer=_init_worker, initargs=(selector,)) as pool:
+        with multiprocessing.Pool(
+            processes=procs, initializer=_init_worker, initargs=(selector,)
+        ) as pool:
             results = pool.map(_worker_task, items_list, chunksize)
     except Exception:
         # Fallback to sequential if multiprocessing fails for any reason

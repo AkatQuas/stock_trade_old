@@ -1,5 +1,5 @@
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
 
 import pandas as pd
 
@@ -8,8 +8,8 @@ from .logger import get_logger
 logger = get_logger("select")
 
 
-def load_data(data_dir: Path, codes: Iterable[str]) -> Dict[str, pd.DataFrame]:
-    frames: Dict[str, pd.DataFrame] = {}
+def load_data(data_dir: Path, codes: Iterable[str]) -> dict[str, pd.DataFrame]:
+    frames: dict[str, pd.DataFrame] = {}
     for code in codes:
         fp = data_dir / f"{code}.csv"
         if not fp.exists():

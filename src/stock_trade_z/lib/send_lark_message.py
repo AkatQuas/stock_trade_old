@@ -14,16 +14,20 @@ from lark_oapi.api.im.v1 import (
 load_dotenv(Path("./.env"))
 
 
-_client: lark.Client | None  = None
+_client: lark.Client | None = None
+
+
 def get_client() -> lark.Client:
     """Initialize and return the Lark client."""
     global _client
     if _client is None:
-        _client = lark.Client.builder() \
-        .app_id(os.getenv("LARK_APP_ID")) \
-        .app_secret(os.getenv("LARK_SECRET")) \
-        .log_level(lark.LogLevel.DEBUG) \
-        .build()
+        _client = (
+            lark.Client.builder()
+            .app_id(os.getenv("LARK_APP_ID"))
+            .app_secret(os.getenv("LARK_SECRET"))
+            .log_level(lark.LogLevel.DEBUG)
+            .build()
+        )
     return _client
 
 
@@ -49,47 +53,34 @@ def build_interactive_card(
         {
             "tag": "div",
             "fields": [
-                {
-                    "is_short": f["is_short"],
-                    "text": {
-                        "tag": "lark_md",
-                        "content": f["content"]
-                    }
-                }
+                {"is_short": f["is_short"], "text": {"tag": "lark_md", "content": f["content"]}}
                 for f in fields
-            ]
+            ],
         }
     ]
 
     if actions:
         elements.append({"tag": "hr"})
-        elements.append({
-            "tag": "action",
-            "layout": "bisected",
-            "actions": [
-                {
-                    "tag": "button",
-                    "text": {
-                        "tag": "plain_text",
-                        "content": a["text"]
-                    },
-                    "type": a.get("type", "primary"),
-                    "value": a.get("value", {})
-                }
-                for a in actions
-            ]
-        })
+        elements.append(
+            {
+                "tag": "action",
+                "layout": "bisected",
+                "actions": [
+                    {
+                        "tag": "button",
+                        "text": {"tag": "plain_text", "content": a["text"]},
+                        "type": a.get("type", "primary"),
+                        "value": a.get("value", {}),
+                    }
+                    for a in actions
+                ],
+            }
+        )
 
     return {
         "config": {"wide_screen_mode": True},
-        "header": {
-            "title": {
-                "tag": "plain_text",
-                "template": template,
-                "content": title
-            }
-        },
-        "elements": elements
+        "header": {"title": {"tag": "plain_text", "template": template, "content": title}},
+        "elements": elements,
     }
 
 
@@ -98,7 +89,7 @@ def send_message(
     content: dict | str,
     msg_type: str = "text",
     max_retries: int = 3,
-    retry_interval: int = 10
+    retry_interval: int = 10,
 ) -> bool:
     """
     Send a message to a Lark user with retry logic.
@@ -120,19 +111,20 @@ def send_message(
         content_str = json.dumps(content) if isinstance(content, dict) else content
     else:
         # For text message, wrap in {"text": ...} format
-        if isinstance(content, dict):
-            content_str = json.dumps(content)
-        else:
-            content_str = content
+        content_str = json.dumps(content) if isinstance(content, dict) else content
 
-    request: CreateMessageRequest = CreateMessageRequest.builder() \
-        .receive_id_type("union_id") \
-        .request_body(CreateMessageRequestBody.builder()
+    request: CreateMessageRequest = (
+        CreateMessageRequest.builder()
+        .receive_id_type("union_id")
+        .request_body(
+            CreateMessageRequestBody.builder()
             .receive_id(receive_id)
             .msg_type(msg_type)
             .content(content_str)
-            .build()) \
+            .build()
+        )
         .build()
+    )
 
     last_error = None
     for attempt in range(1, max_retries + 1):
@@ -140,9 +132,10 @@ def send_message(
             response: CreateMessageResponse = client.im.v1.message.create(request)
 
             if not response.success():
-                last_error = f"code: {response.code}, msg: {response.msg}, log_id: {response.get_log_id()}"
-                lark.logger.warning(
-                    f"Attempt {attempt}/{max_retries} failed: {last_error}")
+                last_error = (
+                    f"code: {response.code}, msg: {response.msg}, log_id: {response.get_log_id()}"
+                )
+                lark.logger.warning(f"Attempt {attempt}/{max_retries} failed: {last_error}")
             else:
                 lark.logger.info(lark.JSON.marshal(response.data, indent=4))
                 return True
@@ -160,10 +153,7 @@ def send_message(
 
 
 def main():
-    send_message(
-        receive_id=os.getenv("ME_UNION_ID"),
-        content={"text": "test content"}
-    )
+    send_message(receive_id=os.getenv("ME_UNION_ID"), content={"text": "test content"})
 
 
 if __name__ == "__main__":

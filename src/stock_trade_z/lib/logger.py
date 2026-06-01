@@ -3,13 +3,13 @@ import os
 import sys
 from typing import Literal
 
-from lib.time import get_today_date
+from stock_trade_z.lib.time import get_today_date
 
 _logger_cache = {}
 
 
 def get_logger(
-    logger_name: Literal["fetch", "select", "check", "noop", "risk"],
+    logger_name: Literal["fetch", "select", "check", "noop", "risk", "registry"],
     log_level: int = logging.INFO,
     log_format: str | None = None,
     file_mode: str = "a",  # Append mode (use "w" to overwrite logs each time)

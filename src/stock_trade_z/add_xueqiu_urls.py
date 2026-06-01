@@ -14,7 +14,8 @@ import argparse
 from pathlib import Path
 
 import pandas as pd
-from lib.xueqiu import add_xueqiu_url_to_dataframe
+
+from stock_trade_z.lib.xueqiu import add_xueqiu_url_to_dataframe
 
 
 def main():

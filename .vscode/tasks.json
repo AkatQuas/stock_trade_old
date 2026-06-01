@@ -3,12 +3,12 @@
   "tasks": [
     {
       "label": "Test Try",
-      "command": ".venv/bin/python",
+      "command": "uv",
       "type": "shell",
       "options": {
         "cwd": "${workspaceFolder}"
       },
-      "args": ["src/stock_trade_z/try_play.py"],
+      "args": ["run", "python", "src/stock_trade_z/try_play.py"],
       "presentation": {
         "reveal": "always"
       },
@@ -16,12 +16,12 @@
     },
     {
       "label": "Check One Symbol",
-      "command": ".venv/bin/python",
+      "command": "uv",
       "type": "shell",
       "options": {
         "cwd": "${workspaceFolder}"
       },
-      "args": ["src/stock_trade_z/check_code.py"],
+      "args": ["run", "stock-check", "--symbol", "002594"],
       "presentation": {
         "reveal": "always"
       },
@@ -29,13 +29,14 @@
     },
     {
       "label": "Fetch K Line",
-      "command": ".venv/bin/python",
+      "command": "uv",
       "type": "shell",
       "options": {
         "cwd": "${workspaceFolder}"
       },
       "args": [
-        "src/stock_trade_z/fetch_kline.py",
+        "run",
+        "stock-fetch-kline",
         "--start",
         "20240101",
         "--end",
@@ -54,12 +55,12 @@
     },
     {
       "label": "Fetch HS300 and ZZ500 List",
-      "command": ".venv/bin/python",
+      "command": "uv",
       "type": "shell",
       "options": {
         "cwd": "${workspaceFolder}"
       },
-      "args": ["src/stock_trade_z/fetch_stocklist_300_500.py"],
+      "args": ["run", "python", "src/stock_trade_z/fetch_stocklist_300_500.py"],
       "presentation": {
         "reveal": "always"
       },
@@ -67,12 +68,12 @@
     },
     {
       "label": "Fetch Stock List",
-      "command": ".venv/bin/python",
+      "command": "uv",
       "type": "shell",
       "options": {
         "cwd": "${workspaceFolder}"
       },
-      "args": ["src/stock_trade_z/fetch_stocklist.py"],
+      "args": ["run", "stock-fetch-list"],
       "presentation": {
         "reveal": "always"
       },
@@ -80,19 +81,12 @@
     },
     {
       "label": "Select Stock",
-      "command": ".venv/bin/python",
+      "command": "uv",
       "type": "shell",
       "options": {
         "cwd": "${workspaceFolder}"
       },
-      "args": [
-        "src/stock_trade_z/select_stock.py",
-        "--data-dir",
-        "./data"
-        // "--send_lark"
-        // "--date",
-        // "20251215"
-      ],
+      "args": ["run", "stock-select", "--data-dir", "./data", "--send-lark"],
       "presentation": {
         "reveal": "always"
       },
@@ -100,17 +94,25 @@
     },
     {
       "label": "Detect Risk Stock",
-      "command": ".venv/bin/python",
+      "command": "uv",
       "type": "shell",
       "options": {
         "cwd": "${workspaceFolder}"
       },
-      "args": [
-        "src/stock_trade_z/detect_risk.py",
-        "--data-dir",
-        "./data",
-        "--send-lark"
-      ],
+      "args": ["run", "stock-detect-risk", "--data-dir", "./data"],
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Detect Risk Stock (send Lark)",
+      "command": "uv",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "args": ["run", "stock-detect-risk", "--data-dir", "./data", "--send-lark"],
       "presentation": {
         "reveal": "always"
       },
@@ -119,12 +121,14 @@
     {
       "label": "Update Stock List in good.csv",
       "detail": "Add or remove code in your favorite list (modify csv file)",
-      "command": ".venv/bin/python",
+      "command": "uv",
       "type": "shell",
       "options": {
         "cwd": "${workspaceFolder}"
       },
       "args": [
+        "run",
+        "python",
         "src/stock_trade_z/update_to_goodlist.py",
         "--stocklist",
         "./stocklist.good.csv"
@@ -134,15 +138,16 @@
     {
       "label": "Sort the stocklist csv file",
       "detail": "This will also fill the latest row data from total list",
-      "command": ".venv/bin/python",
+      "command": "uv",
       "type": "shell",
       "options": {
         "cwd": "${workspaceFolder}"
       },
       "args": [
+        "run",
+        "python",
         "src/stock_trade_z/sort_csv.py",
         "--stocklist",
-        // "./src/stock_trade_z/stocklist.20260225.csv"
         "./stocklist.good.csv",
         "--replace"
       ],
@@ -153,9 +158,93 @@
     },
     {
       "label": "Fetch then Select & Detect Risk",
-      "detail": "Fetch K line data and then Select & Detect Risk",
+      "detail": "Fetch K line data, then select stocks and detect risk",
       "dependsOn": ["Fetch K Line", "Select Stock", "Detect Risk Stock"],
       "dependsOrder": "sequence",
+      "problemMatcher": []
+    },
+    {
+      "label": "Lint (ruff check)",
+      "command": "uv",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "args": ["run", "ruff", "check", "."],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Lint fix (ruff check --fix)",
+      "command": "uv",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "args": ["run", "ruff", "check", "--fix", "."],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Format (ruff format)",
+      "command": "uv",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "args": ["run", "ruff", "format", "."],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Format check (ruff format --check)",
+      "command": "uv",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "args": ["run", "ruff", "format", "--check", "."],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Pre-commit install (git hooks)",
+      "command": "uv",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "args": ["run", "pre-commit", "install"],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Pre-commit run (all files)",
+      "command": "uv",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "args": ["run", "pre-commit", "run", "--all-files"],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
       "problemMatcher": []
     }
   ]

@@ -1,21 +1,21 @@
 import argparse
-from typing import Any, Dict, List
+from typing import Any
 
 import pandas as pd
 
-from lib.bao_stock_client import BSClient
-from lib.load_selector import load_selector
-from lib.load_stocklist import StockCodeDict, load_total_stocklist
-from lib.logger import get_logger
-from lib.time import get_today_name
+from stock_trade_z.lib.bao_stock_client import BSClient
+from stock_trade_z.lib.load_selector import load_selectors
+from stock_trade_z.lib.load_stocklist import StockCodeDict, load_total_stocklist
+from stock_trade_z.lib.logger import get_logger
+from stock_trade_z.lib.time import get_today_name
 
 logger = get_logger("check")
 
 
 def check_symbol(
     symbol: str,
-    total: List[StockCodeDict],
-    selector_dict: Dict[str, Any],
+    total: list[StockCodeDict],
+    selector_dict: dict[str, Any],
 ) -> None:
     """检查单个股票代码是否符合战法"""
     matched = next((item for item in total if item.get("symbol") == symbol), None)
@@ -57,9 +57,7 @@ def check_symbol(
             match_selector.append(alias)
 
     if len(match_selector) > 0:
-        logger.info(
-            "============ 🎉 🎉 符合战法 ==========\n %s\n\n", ", ".join(match_selector)
-        )
+        logger.info("============ 🎉 🎉 符合战法 ==========\n %s\n\n", ", ".join(match_selector))
     else:
         logger.info("============ ❌ ❌ 无匹配 战法 =======\n\n")
 
@@ -75,7 +73,7 @@ def main() -> None:
 
     args = parser.parse_args()
     total = load_total_stocklist()
-    selector_dict = load_selector()
+    selector_dict = load_selectors()
 
     # 单次运行模式
     if args.symbol:

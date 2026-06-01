@@ -15,12 +15,11 @@ def validate(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def get_today_date():
-    current_date = datetime.now().strftime("%Y%m%d")
-    return current_date
+    return datetime.now().strftime("%Y%m%d")
 
 
 def get_today_name():
-    t = pd.Timestamp.now();
+    t = pd.Timestamp.now()
     current_date = t.date()
     current_weekday = t.day_name()
     return f"【今天】{current_date}({current_weekday})"

@@ -3,33 +3,23 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
-from lib.compare import compare_with_preview
-from lib.load_stocklist import sort_dataframe
-from lib.paths import get_file_in_pack
-from lib.ts_pro_api import get_pro_api
-from lib.xueqiu import add_xueqiu_url_to_dataframe
+
+from stock_trade_z.lib.load_stocklist import sort_dataframe
+from stock_trade_z.lib.paths import get_file_in_pack
+from stock_trade_z.lib.ts_pro_api import get_pro_api
+from stock_trade_z.lib.xueqiu import add_xueqiu_url_to_dataframe
 
 
 def fetch_data():
     """Fetch stock list DataFrame from the API and perform light normalization."""
     api = get_pro_api()
     df = api.stock_basic(
-        **{
-            # "ts_code": "",
-            # "name": "",
-            # "exchange": "",
-            # "market": "",
-            # "is_hs": "",
-            "list_status": "L",
-            # "limit": "",
-            # "offset": "",
-        },
+        list_status="L",
         fields=["ts_code", "symbol", "name", "area", "industry"],
     )
     df["name"] = df["name"].str.replace("Ａ", "A")
     df = sort_dataframe(df)
-    df_with_urls = add_xueqiu_url_to_dataframe(df)
-    return df_with_urls
+    return add_xueqiu_url_to_dataframe(df)
 
 
 def save_with_date(df: pd.DataFrame) -> Path:

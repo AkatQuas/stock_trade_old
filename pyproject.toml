@@ -1,23 +1,96 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
 [project]
-name = "stock_trade_z"
-version = "0.1.0"
-description = "Stock trading and risk detection tools"
+name = "stock-trade-z"
+version = "0.2.0"
+description = "Stock trading selection and risk detection (Z-style strategies + mainstream quant factors)"
 readme = "README.md"
 requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "stock_trade_z contributors" }]
 dependencies = [
-  "pandas==2.3.0",
-  "tqdm==4.66.4",
-  "tushare==1.4.21",
-  "scipy==1.14.1",
-  "python-dotenv==1.2.1",
-  "pysnowball==0.1.8",
+  "pandas>=2.2,<3",
+  "tqdm>=4.66",
+  "tushare>=1.4",
+  "scipy>=1.11",
+  "python-dotenv>=1.0",
+  "pysnowball>=0.1.8",
   "baostock>=0.8.9",
   "lark-oapi>=1.6.5",
+  "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+dev = ["ruff>=0.9", "pre-commit>=4.0"]
+
+[project.scripts]
+stock-fetch-list = "stock_trade_z.fetch_stocklist:main"
+stock-fetch-kline = "stock_trade_z.fetch_kline:main"
+stock-select = "stock_trade_z.select_stock:main"
+stock-detect-risk = "stock_trade_z.detect_risk:main"
+stock-check = "stock_trade_z.check_code:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/stock_trade_z"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/stock_trade_z/selector.config.json",
+  "src/stock_trade_z/risk.config.json",
+  "src/stock_trade_z/stocklist.total.csv",
 ]
 
 [tool.uv]
+package = true
+
+[dependency-groups]
+dev = ["ruff>=0.9", "pre-commit>=4.0"]
 
 [[tool.uv.index]]
 url = "https://pypi.tuna.tsinghua.edu.cn/simple/"
 default = true
-# uv-specific settings can be added here
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src"]
+extend-exclude = [
+  "data",
+  "log",
+  ".venv",
+]
+
+[tool.ruff.lint]
+select = [
+  "E",      # pycodestyle errors
+  "F",      # pyflakes
+  "I",      # isort
+  "W",      # pycodestyle warnings
+  "UP",     # pyupgrade
+  "B",      # flake8-bugbear
+  "SIM",    # flake8-simplify
+  "RET",    # flake8-return
+  "PIE",    # flake8-pie
+  "RUF",    # ruff-specific
+]
+ignore = [
+  "E501",   # line length (formatter handles wrapping)
+  "B008",   # function call in default arg (common in argparse patterns)
+  "RUF001", # fullwidth punctuation in Chinese UI strings
+  "RUF002", # fullwidth punctuation in Chinese docstrings
+  "RUF003", # fullwidth punctuation in Chinese comments
+]
+
+[tool.ruff.lint.per-file-ignores]
+"src/stock_trade_z/try_play.py" = ["F401", "E402"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["stock_trade_z"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

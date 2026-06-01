@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, Optional, Tuple
 
 import pandas as pd
 
@@ -9,8 +8,8 @@ from .load_data import load_data
 
 
 def load_data_folder(
-    data_dir: Path, date: Optional[str] = None
-) -> Tuple[Dict[str, pd.DataFrame], pd.Timestamp]:
+    data_dir: Path, date: str | None = None
+) -> tuple[dict[str, pd.DataFrame], pd.Timestamp]:
     """Load CSV files from `data_dir` and normalize their `date` column.
 
     Parameters
@@ -32,9 +31,6 @@ def load_data_folder(
     for df in data.values():
         df["date"] = pd.to_datetime(df["date"], errors="coerce")
 
-    if date:
-        trade_date = pd.to_datetime(date)
-    else:
-        trade_date = max(df["date"].max() for df in data.values())
+    trade_date = pd.to_datetime(date) if date else max(df["date"].max() for df in data.values())
 
     return data, trade_date

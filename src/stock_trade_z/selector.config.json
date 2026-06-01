@@ -107,11 +107,61 @@
       }
     }
   ],
-  "selectors2": [
+  "quant_selectors": [
     {
-      "class": "SupportLevelSelector",
-      "alias": "企稳战法",
-      "params": {}
+      "class": "MomentumSelector",
+      "alias": "动量因子",
+      "activate": true,
+      "params": {
+        "roc_window": 20,
+        "roc_min_pct": 5.0,
+        "ma_window": 50,
+        "min_history": 60
+      }
+    },
+    {
+      "class": "MACDGoldenCrossSelector",
+      "alias": "MACD金叉",
+      "activate": true,
+      "params": {
+        "lookback_n": 5,
+        "require_dif_positive": true,
+        "min_history": 40
+      }
+    },
+    {
+      "class": "BollingerMeanReversionSelector",
+      "alias": "布林均值回归",
+      "activate": true,
+      "params": {
+        "bb_window": 20,
+        "bb_std": 2.0,
+        "rsi_window": 14,
+        "rsi_max": 35.0,
+        "min_history": 30
+      }
+    },
+    {
+      "class": "DonchianBreakoutSelector",
+      "alias": "唐奇安突破",
+      "activate": true,
+      "params": {
+        "channel_n": 20,
+        "vol_lookback": 20,
+        "vol_multiple": 1.5,
+        "min_history": 25
+      }
+    },
+    {
+      "class": "DualMAGoldenCrossSelector",
+      "alias": "双均线金叉",
+      "activate": true,
+      "params": {
+        "short_ma": 10,
+        "long_ma": 30,
+        "lookback_n": 5,
+        "min_history": 35
+      }
     }
   ]
 }

@@ -2,8 +2,9 @@ import argparse
 from pathlib import Path
 
 import pandas as pd
-from lib.load_stocklist import load_stock_from_file_in_df, sort_dataframe
-from lib.paths import get_file_in_pack
+
+from stock_trade_z.lib.load_stocklist import load_stock_from_file_in_df, sort_dataframe
+from stock_trade_z.lib.paths import get_file_in_pack
 
 
 def find_stock_by_symbol(total_df: pd.DataFrame, symbol: str) -> pd.DataFrame:
@@ -18,14 +19,11 @@ def find_stock_by_symbol(total_df: pd.DataFrame, symbol: str) -> pd.DataFrame:
     """
     symbol = str(symbol).zfill(6)
 
-    matched = total_df[total_df["symbol"] == symbol]
-    return matched
+    return total_df[total_df["symbol"] == symbol]
 
 
 def add_stock_to_good(
-    total_df: pd.DataFrame,
-    good_df: pd.DataFrame,
-    symbol: str
+    total_df: pd.DataFrame, good_df: pd.DataFrame, symbol: str
 ) -> tuple[pd.DataFrame, bool]:
     """将指定股票添加到好股票列表。
 
@@ -65,10 +63,7 @@ def add_stock_to_good(
     return combined_df, True
 
 
-def remove_stock_from_good(
-    good_df: pd.DataFrame,
-    symbol: str
-) -> tuple[pd.DataFrame, bool]:
+def remove_stock_from_good(good_df: pd.DataFrame, symbol: str) -> tuple[pd.DataFrame, bool]:
     """从好股票列表中删除指定股票。
 
     Args:
@@ -125,7 +120,7 @@ def interactive_mode(
                 user_input = input("请输入股票代码（6位）: ").strip()
 
                 # 退出命令
-                if user_input.lower() in ['q', 'quit', 'exit']:
+                if user_input.lower() in ["q", "quit", "exit"]:
                     print("\n👋 再见！")
                     break
 
@@ -134,11 +129,8 @@ def interactive_mode(
                     continue
 
                 # 检查是否为删除操作
-                is_remove = user_input.startswith('-')
-                if is_remove:
-                    code = user_input[1:].strip()
-                else:
-                    code = user_input
+                is_remove = user_input.startswith("-")
+                code = user_input[1:].strip() if is_remove else user_input
 
                 # 验证代码格式
                 if not code.isdigit():
@@ -175,9 +167,7 @@ def interactive_mode(
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="交互式管理好股票列表（添加/删除）"
-    )
+    parser = argparse.ArgumentParser(description="交互式管理好股票列表（添加/删除）")
     parser.add_argument(
         "--stocklist",
         type=Path,
@@ -186,7 +176,7 @@ def main():
     )
 
     args = parser.parse_args()
-    total_csv = get_file_in_pack('./stocklist.total.csv')
+    total_csv = get_file_in_pack("./stocklist.total.csv")
 
     # 加载数据
     total_df = load_stock_from_file_in_df(total_csv)

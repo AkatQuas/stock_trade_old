@@ -37,8 +37,7 @@ def compute_cci14_cci84(df: pd.DataFrame):
     # 第二步：调用通用函数计算CCI14和CCI84
     df["CCI14"] = compute_cci(df["TYP"], period=14)
     df["CCI84"] = compute_cci(df["TYP"], period=84)
-    df = df.drop(columns=["TYP"], errors="ignore")
-    return df
+    return df.drop(columns=["TYP"], errors="ignore")
 
 
 # --------------------------- 通用指标 --------------------------- #
@@ -74,8 +73,7 @@ def compute_pit_and_trap(
     # CROSS(gold_pit_threshold, RRA) 等价于 RRA从< gold_pit_threshold 变为 > gold_pit_threshold
     df = df.assign(
         cross_up_signal=(
-            (df["RRA"].shift(1) < gold_pit_threshold)
-            & (df["RRA"] >= gold_pit_threshold)
+            (df["RRA"].shift(1) < gold_pit_threshold) & (df["RRA"] >= gold_pit_threshold)
         ).astype(int)
     )
 
@@ -96,9 +94,7 @@ def compute_pit_and_trap(
             df.loc[i, "RRB"] = 10000  # 无信号时设为大数，避免条件误触发
 
     # 黄金坑信号条件：RRA < -10 且 距离上一次上穿超过3个周期
-    df = df.assign(
-        gold_pit=np.where((df["RRA"] < gold_pit_threshold) & (df["RRB"] > 3), -120, 0)
-    )
+    df = df.assign(gold_pit=np.where((df["RRA"] < gold_pit_threshold) & (df["RRB"] > 3), -120, 0))
 
     # Step 2: Mark RRA cross DOWN the top trap threshold (e.g., 10)
     # Cross down = RRA shifts from > threshold to < threshold
@@ -124,12 +120,11 @@ def compute_pit_and_trap(
     # Step 4: Top Trap sell signal (120 = sell, 0 = no)
     # Logic: RRA > threshold AND distance from last cross down > 3 periods
     df = df.assign(
-        top_trap_sell= np.where(
-        (df["RRA"] > top_trap_threshold) & (df["RRC"] > 3), 120, 0
-    ))
+        top_trap_sell=np.where((df["RRA"] > top_trap_threshold) & (df["RRC"] > 3), 120, 0)
+    )
 
     # 删除中间计算列（可选，如需保留可注释）
-    df = df.drop(
+    return df.drop(
         columns=[
             "RR8",
             "RR9",
@@ -142,7 +137,6 @@ def compute_pit_and_trap(
         ],
         errors="ignore",
     )
-    return df
 
 
 def compute_kdj(df: pd.DataFrame, n: int = 9) -> pd.DataFrame:
@@ -173,8 +167,7 @@ def compute_rsi(df: pd.DataFrame, n: int = 14) -> pd.Series:
     avg_gain = gain.rolling(window=n, min_periods=1).mean()
     avg_loss = loss.rolling(window=n, min_periods=1).mean()
     rs = avg_gain / (avg_loss + 1e-9)
-    rsi = 100 - 100 / (1 + rs)
-    return rsi
+    return 100 - 100 / (1 + rs)
 
 
 def compute_bbi(df: pd.DataFrame) -> pd.Series:
@@ -196,8 +189,7 @@ def compute_rsv(
     """
     low_n = df["low"].rolling(window=n, min_periods=1).min()
     high_close_n = df["close"].rolling(window=n, min_periods=1).max()
-    rsv = (df["close"] - low_n) / (high_close_n - low_n + 1e-9) * 100.0
-    return rsv
+    return (df["close"] - low_n) / (high_close_n - low_n + 1e-9) * 100.0
 
 
 def compute_dif(df: pd.DataFrame, fast: int = 12, slow: int = 26) -> pd.Series:
@@ -205,6 +197,29 @@ def compute_dif(df: pd.DataFrame, fast: int = 12, slow: int = 26) -> pd.Series:
     ema_fast = df["close"].ewm(span=fast, adjust=False).mean()
     ema_slow = df["close"].ewm(span=slow, adjust=False).mean()
     return ema_fast - ema_slow
+
+
+def compute_macd(df: pd.DataFrame, fast: int = 12, slow: int = 26, signal: int = 9) -> pd.DataFrame:
+    """Return DIF, DEA (signal), and MACD histogram columns."""
+    dif = compute_dif(df, fast=fast, slow=slow)
+    dea = dif.ewm(span=signal, adjust=False).mean()
+    hist = (dif - dea) * 2
+    return pd.DataFrame({"DIF": dif, "DEA": dea, "MACD": hist})
+
+
+def compute_bollinger(df: pd.DataFrame, n: int = 20, num_std: float = 2.0) -> pd.DataFrame:
+    """Bollinger bands: middle (SMA), upper, lower."""
+    mid = df["close"].rolling(window=n, min_periods=n).mean()
+    std = df["close"].rolling(window=n, min_periods=n).std()
+    upper = mid + num_std * std
+    lower = mid - num_std * std
+    return pd.DataFrame({"BB_MID": mid, "BB_UPPER": upper, "BB_LOWER": lower})
+
+
+def compute_roc(close: pd.Series, n: int = 20) -> pd.Series:
+    """Rate of change (%) over n periods: (C / C_{t-n} - 1) * 100."""
+    prev = close.shift(n)
+    return (close / prev - 1.0) * 100.0
 
 
 def bbi_deriv_uptrend(
@@ -319,9 +334,10 @@ def last_valid_ma_cross_up(
             and pd.notna(c_now)
             and pd.notna(m_prev)
             and pd.notna(m_now)
+            and c_prev < m_prev
+            and c_now >= m_now
         ):
-            if c_prev < m_prev and c_now >= m_now:
-                return i
+            return i
     return None
 
 
@@ -388,18 +404,16 @@ def zx_condition_at_positions(
     if pos < 0 or pos >= len(df):
         return False
 
-    s = float(zxdq.iloc[pos])
-    l = float(zxdkx.iloc[pos]) if pd.notna(zxdkx.iloc[pos]) else float("nan")
-    c = float(df["close"].iloc[pos])
+    short_line = float(zxdq.iloc[pos])
+    long_line = float(zxdkx.iloc[pos]) if pd.notna(zxdkx.iloc[pos]) else float("nan")
+    close_at_pos = float(df["close"].iloc[pos])
 
-    if not np.isfinite(l) or not np.isfinite(s):
+    if not np.isfinite(long_line) or not np.isfinite(short_line):
         return False
 
-    if require_close_gt_long and not (c > l):
-        return False
-    if require_short_gt_long and not (s > l):
-        return False
-    return True
+    close_ok = (not require_close_gt_long) or (close_at_pos > long_line)
+    short_ok = (not require_short_gt_long) or (short_line > long_line)
+    return close_ok and short_ok
 
 
 def compute_atr(df: pd.DataFrame, n: int = 14) -> pd.Series:

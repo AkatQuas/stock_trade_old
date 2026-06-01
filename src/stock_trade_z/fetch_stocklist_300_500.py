@@ -3,11 +3,13 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
-from lib.bao_stock_client import BSClient
-from lib.compare import compare_with_preview
-from lib.load_stocklist import (load_stock_from_file_in_df,
-                                load_total_stocklist, sort_dataframe)
-from lib.paths import get_file_in_pack
+
+from stock_trade_z.lib.bao_stock_client import BSClient
+from stock_trade_z.lib.load_stocklist import (
+    load_total_stocklist,
+    sort_dataframe,
+)
+from stock_trade_z.lib.paths import get_file_in_pack
 
 
 def fetch_300_500():
@@ -18,18 +20,19 @@ def fetch_300_500():
             total,
             on="ts_code",
             how="left",
-            suffixes=("_file1", None)  # Add suffixes if name columns differ
+            suffixes=("_file1", None),  # Add suffixes if name columns differ
         )
 
         print(merged_df.head())
 
         merged_df["symbol"] = merged_df["symbol"].fillna(merged_df["symbol_file1"])
-        merged_df = merged_df.drop(columns=[col for col in df.columns if col.endswith("_file1")])[total.columns]
-        merged_df = sort_dataframe(merged_df)
-        return merged_df
+        merged_df = merged_df.drop(columns=[col for col in df.columns if col.endswith("_file1")])[
+            total.columns
+        ]
+        return sort_dataframe(merged_df)
 
 
-def save_with_date(df: pd.DataFrame)->Path:
+def save_with_date(df: pd.DataFrame) -> Path:
     """Save DataFrame to a dated CSV and return the Path."""
     current_date = datetime.now().strftime("%m%d")
     csv_file = get_file_in_pack(f"./stocklist.300_500.{current_date}.csv")
@@ -46,6 +49,7 @@ def main():
     shutil.copy2(new_path, old_path)
     print(f"{old_path} is replaced.")
     print(f"{new_path} backup.")
+
 
 if __name__ == "__main__":
     print("建议半个月执行一次")

@@ -1,3 +1,18 @@
 {
-  "cSpell.words": ["lookback", "stocklist", "Tushare", "xueqiu"]
+  "cSpell.words": ["lookback", "stocklist", "Tushare", "xueqiu"],
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "python.terminal.activateEnvironment": true,
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
+  },
+  "ruff.enable": true,
+  "ruff.organizeImports": true,
+  "ruff.fixAll": true,
+  "ruff.lineLength": 100,
+  "ruff.configuration": "${workspaceFolder}/pyproject.toml"
 }

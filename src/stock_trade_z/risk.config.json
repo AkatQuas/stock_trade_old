@@ -1,0 +1,77 @@
+{
+  "risk_selectors": [
+    {
+      "class": "ATRVolatilitySelector",
+      "alias": "ATR Volatility 高波动率",
+      "params": {
+        "atr_window": 14,
+        "rel_threshold": 0.05,
+        "min_history": 30
+      }
+    },
+    {
+      "class": "RSIExtremesSelector",
+      "alias": "RSI Extremes 超买或超卖",
+      "params": {
+        "rsi_window": 14,
+        "low_thresh": 20.0,
+        "high_thresh": 80.0,
+        "min_history": 30
+      }
+    },
+    {
+      "class": "MADeclineSelector",
+      "alias": "MA Decline 均线走弱",
+      "params": {
+        "short_ma": 5,
+        "long_ma": 50,
+        "slope_days": 5,
+        "min_history": 60
+      }
+    },
+    {
+      "class": "VolumeSelloffSelector",
+      "alias": "Volume Selloff 放量抛售",
+      "params": {
+        "lookback_n": 20,
+        "vol_multiple": 2.0,
+        "drop_pct": 0.03,
+        "min_history": 25
+      }
+    },
+    {
+      "class": "DrawdownFromPeakSelector",
+      "alias": "Drawdown 峰值回撤",
+      "params": {
+        "lookback_n": 60,
+        "drawdown_pct": 0.15,
+        "min_history": 65
+      }
+    },
+    {
+      "class": "GapDownSelector",
+      "alias": "Gap Down 跳空低开",
+      "params": {
+        "gap_pct": 0.03,
+        "min_history": 5
+      }
+    },
+    {
+      "class": "MACDBearishSelector",
+      "alias": "MACD Bearish 空头信号",
+      "params": {
+        "lookback_n": 5,
+        "min_history": 35
+      }
+    },
+    {
+      "class": "TopTrapSelector",
+      "alias": "Top Trap 顶部陷阱",
+      "params": {
+        "cci_overbought_threshold": 100.0,
+        "cci_extreme_overbought_threshold": 200.0,
+        "min_history": 90
+      }
+    }
+  ]
+}

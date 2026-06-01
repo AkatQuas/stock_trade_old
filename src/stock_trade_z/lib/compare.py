@@ -1,5 +1,3 @@
-
-import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -20,9 +18,7 @@ def open_diff_preview(new_file: Path, old_file: Path):
 def prompt_and_replace(new_file: Path, old_file: Path) -> bool:
     """Ask the user whether to replace `old_file` with `new_file` (default: yes)."""
     try:
-        resp = input(
-            f"Replace sibling '{old_file.name}' with {new_file.name}? [Y/n]: "
-        ).strip()
+        resp = input(f"Replace sibling '{old_file.name}' with {new_file.name}? [Y/n]: ").strip()
         print("")
     except (EOFError, KeyboardInterrupt):
         print("No input detected; defaulting to yes.")
@@ -40,12 +36,11 @@ def prompt_and_replace(new_file: Path, old_file: Path) -> bool:
         print("Skipped replacing old file")
         return False
 
+
 def prompt_and_delete(file: Path):
     """Ask the user whether to delete `new_file` (default: yes)."""
     try:
-        resp = input(
-            f"Delete file {file}? [Y/n]: "
-        ).strip()
+        resp = input(f"Delete file {file}? [Y/n]: ").strip()
         print("")
     except (EOFError, KeyboardInterrupt):
         print("No input detected; defaulting to yes.")
@@ -62,6 +57,7 @@ def prompt_and_delete(file: Path):
     else:
         print("Skipped deletion")
         return False
+
 
 def compare_with_preview(new_file: Path, old_file: Path):
     if old_file.exists():

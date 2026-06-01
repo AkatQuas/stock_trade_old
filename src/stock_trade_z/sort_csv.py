@@ -2,7 +2,7 @@ import argparse
 import warnings
 from pathlib import Path
 
-from lib.load_stocklist import (
+from stock_trade_z.lib.load_stocklist import (
     load_stock_from_file_in_df,
     load_total_stocklist,
     sort_dataframe,
@@ -46,9 +46,9 @@ def main():
         how="left",
         suffixes=("_file1", None),
     )
-    merged_df = merged_df.drop(
-        columns=[col for col in df.columns if col.endswith("_file1")]
-    )[total.columns]
+    merged_df = merged_df.drop(columns=[col for col in df.columns if col.endswith("_file1")])[
+        total.columns
+    ]
     print(merged_df.head())
     df = sort_dataframe(merged_df)
 

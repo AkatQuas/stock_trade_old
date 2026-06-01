@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -81,7 +81,6 @@ class BBIKDJSelector:
         j_quantile = float(j_window.quantile(self.j_q_threshold))
 
         if not (j_today < self.j_threshold or j_today <= j_quantile):
-
             return False
 
         # —— 2.5 60日均线条件（使用通用函数）
@@ -92,9 +91,7 @@ class BBIKDJSelector:
             return False
 
         # 寻找最近一次“有效上穿 MA60”的 T（使用 max_window 作为回看长度，避免过旧）
-        t_pos = last_valid_ma_cross_up(
-            hist["close"], hist["MA60"], lookback_n=self.max_window
-        )
+        t_pos = last_valid_ma_cross_up(hist["close"], hist["MA60"], lookback_n=self.max_window)
         if t_pos is None:
             return False
 
@@ -104,15 +101,12 @@ class BBIKDJSelector:
             return False
 
         # 4. 当日：收盘>长期线 且 短期线>长期线
-        if not zx_condition_at_positions(
+        return zx_condition_at_positions(
             hist, require_close_gt_long=True, require_short_gt_long=True, pos=None
-        ):
-            return False
-
-        return True
+        )
 
     # ---------- 多股票批量 ---------- #
-    def select(self, date: pd.Timestamp, data: Dict[str, pd.DataFrame]) -> List[str]:
+    def select(self, date: pd.Timestamp, data: dict[str, pd.DataFrame]) -> list[str]:
         tasks = []
         for code, df in data.items():
             hist = df[df["date"] <= date]
@@ -124,18 +118,19 @@ class BBIKDJSelector:
 
         return parallel_select_helper(self, tasks)
 
+
 class GoldPitSelector:
     def __init__(
-            self,
+        self,
         gold_pit_threshold: float = -10.0,
         cci_overbought_threshold: float = 100.0,
         cci_extreme_overbought_threshold: float = 200.0,
         cci_oversold_threshold: float = -100.0,
     ) -> None:
         self.gold_pit_threshold = gold_pit_threshold
-        self.cci_overbought_threshold= cci_overbought_threshold
+        self.cci_overbought_threshold = cci_overbought_threshold
         self.cci_extreme_overbought_threshold = cci_extreme_overbought_threshold
-        self.cci_oversold_threshold= cci_oversold_threshold
+        self.cci_oversold_threshold = cci_oversold_threshold
 
     # ---------- 单支股票过滤 ---------- #
     def _passes_filters(self, hist: pd.DataFrame) -> bool:
@@ -144,18 +139,22 @@ class GoldPitSelector:
         hist = compute_pit_and_trap(hist, self.gold_pit_threshold)
         hist = compute_cci14_cci84(hist)
         # CCI Sell Signals (overbought)
-        hist['cci14_overbought_sell'] = np.where(hist['CCI14'] > self.cci_overbought_threshold, 1, 0)
-        hist['cci14_extreme_overbought_sell'] = np.where(hist['CCI14'] > self.cci_extreme_overbought_threshold, 1, 0)
-        hist['cci84_overbought_sell'] = np.where(hist['CCI84'] > self.cci_overbought_threshold, 1, 0)
+        hist["cci14_overbought_sell"] = np.where(
+            hist["CCI14"] > self.cci_overbought_threshold, 1, 0
+        )
+        hist["cci14_extreme_overbought_sell"] = np.where(
+            hist["CCI14"] > self.cci_extreme_overbought_threshold, 1, 0
+        )
+        hist["cci84_overbought_sell"] = np.where(
+            hist["CCI84"] > self.cci_overbought_threshold, 1, 0
+        )
 
         # CCI Buy Signal (oversold, optional reference)
-        hist['cci14_oversold_buy'] = np.where(hist['CCI14'] < self.cci_oversold_threshold, 1, 0)
-        if hist['cci14_oversold_buy'].iloc[-1] == 1 and hist['gold_pit'].iloc[-1] == -120:
-            return True
-        return False
+        hist["cci14_oversold_buy"] = np.where(hist["CCI14"] < self.cci_oversold_threshold, 1, 0)
+        return bool(hist["cci14_oversold_buy"].iloc[-1] == 1 and hist["gold_pit"].iloc[-1] == -120)
 
     # ---------- 多股票批量 ---------- #
-    def select(self, date: pd.Timestamp, data: Dict[str, pd.DataFrame]) -> List[str]:
+    def select(self, date: pd.Timestamp, data: dict[str, pd.DataFrame]) -> list[str]:
         tasks = []
         for code, df in data.items():
             hist = df[df["date"] <= date]
@@ -294,18 +293,14 @@ class SupportLevelSelector:
                 return False
 
             # 过滤条件7：知行线趋势过滤（可选）
-            if self.use_zx_filter and not latest["zx_filter"]:
-                return False
-
-            # 所有条件满足
-            return True
+            return not (self.use_zx_filter and not latest["zx_filter"])
 
         except Exception as e:
             # 指标计算异常时，判定为不符合条件
             print(f"过滤逻辑执行异常：{e}")
             return False
 
-    def select(self, date: pd.Timestamp, data: Dict[str, pd.DataFrame]) -> List[str]:
+    def select(self, date: pd.Timestamp, data: dict[str, pd.DataFrame]) -> list[str]:
         tasks = []
         for code, df in data.items():
             hist = df[df["date"] <= date]
@@ -344,7 +339,7 @@ class SuperB1Selector:
         j_threshold: float = -5,
         j_q_threshold: float = 0.10,
         # ↓↓↓ 新增：嵌套 BBIKDJSelector 配置
-        B1_params: Optional[Dict[str, Any]] = None,
+        B1_params: dict[str, Any] | None = None,
     ) -> None:
         # ---------- 参数合法性检查 ----------
         if lookback_n < 2:
@@ -398,8 +393,7 @@ class SuperB1Selector:
                 if low <= 0 or (high / low - 1) > self.close_vol_pct:
                     tm_idx = None
                     continue
-                else:
-                    break
+                break
         if tm_idx is None:
             return False
 
@@ -412,34 +406,24 @@ class SuperB1Selector:
 
         # ---------- Step-3: 当日相对前一日跌幅 ----------
         close_today, close_prev = hist["close"].iloc[-1], hist["close"].iloc[-2]
-        if (
-            close_prev <= 0
-            or (close_prev - close_today) / close_prev < self.price_drop_pct
-        ):
+        if close_prev <= 0 or (close_prev - close_today) / close_prev < self.price_drop_pct:
             return False
 
         # ---------- Step-4: J 值极低 ----------
         kdj = compute_kdj(hist)
         j_today = float(kdj["J"].iloc[-1])
         j_window = kdj["J"].iloc[-self.lookback_n :].dropna()
-        j_q_val = (
-            float(j_window.quantile(self.j_q_threshold))
-            if not j_window.empty
-            else np.nan
-        )
+        j_q_val = float(j_window.quantile(self.j_q_threshold)) if not j_window.empty else np.nan
         if not (j_today < self.j_threshold or j_today <= j_q_val):
             return False
 
         # —— 当日仅要求【短期线>长期线】
-        if not zx_condition_at_positions(
+        return zx_condition_at_positions(
             hist, require_close_gt_long=False, require_short_gt_long=True, pos=None
-        ):
-            return False
-
-        return True
+        )
 
     # 批量选股接口
-    def select(self, date: pd.Timestamp, data: Dict[str, pd.DataFrame]) -> List[str]:
+    def select(self, date: pd.Timestamp, data: dict[str, pd.DataFrame]) -> list[str]:
         tasks = []
         min_len = self.lookback_n + self._extra_for_bbi
         for code, df in data.items():
@@ -546,19 +530,16 @@ class PeakKDJSelector:
         if not (j_today < self.j_threshold or j_today <= j_quantile):
             return False
 
-        if not zx_condition_at_positions(
+        return zx_condition_at_positions(
             hist, require_close_gt_long=True, require_short_gt_long=True, pos=None
-        ):
-            return False
-
-        return True
+        )
 
     # ---------- 多股票批量 ---------- #
     def select(
         self,
         date: pd.Timestamp,
-        data: Dict[str, pd.DataFrame],
-    ) -> List[str]:
+        data: dict[str, pd.DataFrame],
+    ) -> list[str]:
         tasks = []
         for code, df in data.items():
             hist = df[df["date"] <= date]
@@ -653,19 +634,16 @@ class BBIShortLongSelector:
             return False
 
         # 4. 新增：知行情形
-        if not zx_condition_at_positions(
+        return zx_condition_at_positions(
             hist, require_close_gt_long=True, require_short_gt_long=True, pos=None
-        ):
-            return False
-
-        return True
+        )
 
     # ---------- 多股票批量 ---------- #
     def select(
         self,
         date: pd.Timestamp,
-        data: Dict[str, pd.DataFrame],
-    ) -> List[str]:
+        data: dict[str, pd.DataFrame],
+    ) -> list[str]:
         tasks = []
         for code, df in data.items():
             hist = df[df["date"] <= date]
@@ -757,9 +735,7 @@ class MA60CrossVolumeWaveSelector:
         if hist["close"].iloc[-1] < hist["MA60"].iloc[-1]:
             return False
 
-        t_pos = last_valid_ma_cross_up(
-            hist["close"], hist["MA60"], lookback_n=self.lookback_n
-        )
+        t_pos = last_valid_ma_cross_up(hist["close"], hist["MA60"], lookback_n=self.lookback_n)
         if t_pos is None:
             return False
 
@@ -791,9 +767,7 @@ class MA60CrossVolumeWaveSelector:
         # 成交量均值对比
         wave_avg_vol = float(wave["volume"].replace(0, np.nan).dropna().mean())
         pre_avg_vol = float(pre["volume"].replace(0, np.nan).dropna().mean())
-        if not (
-            np.isfinite(wave_avg_vol) and np.isfinite(pre_avg_vol) and pre_avg_vol > 0
-        ):
+        if not (np.isfinite(wave_avg_vol) and np.isfinite(pre_avg_vol) and pre_avg_vol > 0):
             return False
 
         if wave_avg_vol < self.vol_multiple * pre_avg_vol:
@@ -803,19 +777,14 @@ class MA60CrossVolumeWaveSelector:
         if not self._ma_slope_positive(hist["MA60"], self.ma60_slope_days):
             return False
 
-        if not zx_condition_at_positions(
+        return zx_condition_at_positions(
             hist, require_close_gt_long=True, require_short_gt_long=True, pos=None
-        ):
-            return False
+        )
 
-        return True
-
-    def select(self, date: pd.Timestamp, data: Dict[str, pd.DataFrame]) -> List[str]:
+    def select(self, date: pd.Timestamp, data: dict[str, pd.DataFrame]) -> list[str]:
         tasks = []
         # 给足 60 日均线与量能比较的历史长度
-        need_len = max(
-            60 + self.lookback_n + self.ma60_slope_days, self.max_window + 20
-        )
+        need_len = max(60 + self.lookback_n + self.ma60_slope_days, self.max_window + 20)
         for code, df in data.items():
             hist = df[df["date"] <= date].tail(need_len)
             if len(hist) < need_len:
@@ -826,7 +795,6 @@ class MA60CrossVolumeWaveSelector:
 
 
 class BigBullishVolumeSelector:
-
     def __init__(
         self,
         *,
@@ -857,7 +825,7 @@ class BigBullishVolumeSelector:
         self.require_bullish_close = bool(require_bullish_close)
         self.ignore_zero_volume = bool(ignore_zero_volume)
         self.close_lt_zxdq_mult = float(close_lt_zxdq_mult)
-        self.eps = float(1e-12)
+        self.eps = 1e-12
         self.min_history = (
             int(min_history) if min_history is not None else (self.vol_lookback_n + 2)
         )
@@ -927,9 +895,7 @@ class BigBullishVolumeSelector:
             return False
 
         # 3) 放量：当日成交量 > 前 n 日均量 * 倍数
-        vol_hist = (
-            hist["volume"].iloc[-(self.vol_lookback_n + 1) : -1].astype(float)
-        )  # T-n ... T-1
+        vol_hist = hist["volume"].iloc[-(self.vol_lookback_n + 1) : -1].astype(float)  # T-n ... T-1
         if self.ignore_zero_volume:
             vol_hist = vol_hist.replace(0, np.nan).dropna()
 
@@ -953,13 +919,9 @@ class BigBullishVolumeSelector:
 
         if not np.isfinite(zxdq_T):
             return False
-        else:
-            if not (cT < zxdq_T * self.close_lt_zxdq_mult):
-                return False
+        return cT < zxdq_T * self.close_lt_zxdq_mult
 
-        return True
-
-    def select(self, date: pd.Timestamp, data: Dict[str, pd.DataFrame]) -> List[str]:
+    def select(self, date: pd.Timestamp, data: dict[str, pd.DataFrame]) -> list[str]:
         tasks = []
         need_len = max(self.min_history, self.vol_lookback_n + 2)
         for code, df in data.items():
@@ -1035,12 +997,9 @@ class MACrossSelector:
 
         # 4. KDJ oversold
         kdj = compute_kdj(hist)
-        if kdj["J"].iloc[-1] > self.j_threshold:
-            return False
+        return not kdj["J"].iloc[-1] > self.j_threshold
 
-        return True
-
-    def select(self, date: pd.Timestamp, data: Dict[str, pd.DataFrame]) -> List[str]:
+    def select(self, date: pd.Timestamp, data: dict[str, pd.DataFrame]) -> list[str]:
         tasks = []
         need_len = max(self.long_ma, self.lookback_n) + 20
         for code, df in data.items():
