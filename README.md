@@ -20,7 +20,7 @@
 
 - [快速上手](#快速上手)
   - [环境与依赖](#环境与依赖)
-  - [准备 Tushare Token](#准备-tushare-token)
+  - [环境变量与飞书（推荐 setup 向导）](#环境变量与飞书推荐-setup-向导)
 - [核心功能](#核心功能)
   - [1. 获取股票列表](#1-获取股票列表)
   - [2. 下载历史 K 线（qfq，日线）](#2-下载历史-k-线qfq日线)
@@ -84,22 +84,69 @@ uv run pre-commit run --all-files  # 手动全量跑一遍
 
 > 关键依赖：`pandas`, `tqdm`, `tushare`, `baostock`, `numpy`, `scipy`。
 
-### 准备 Tushare Token
+### 环境变量与飞书（推荐 setup 向导）
 
-在 [TuShare](https://tushare.pro/) 注册账号，并从 [这里获取 token](https://tushare.pro/user/token)。
+选股 / 风控支持 `--send-lark` 推送飞书卡片，每日 GitHub Actions 工作流也会用到相同配置。需要准备：
 
-1. 长期有效的方式，请更新 `.env.example` 里面的变量值，并重命名为 `.env`。
+| 变量 | 说明 |
+|------|------|
+| `TUSHARE_TOKEN` | [TuShare](https://tushare.pro/user/token) 数据接口 Token |
+| `LARK_APP_ID` | [飞书开放平台](https://open.feishu.cn/app) 应用 App ID |
+| `LARK_SECRET` | 飞书应用 App Secret |
+| `ME_UNION_ID` | 接收人的 `union_id`（应用需开通 `im:message` 权限） |
 
-或者，
+#### 方式一：交互式配置向导（推荐）
 
-2. 在当前 CLI session 下临时使用，请设置变量：
+在仓库根目录运行（需已安装 [GitHub CLI](https://cli.github.com) 并完成 `gh auth login`）：
 
 ```bash
-# Windows (PowerShell)
-setx TUSHARE_TOKEN "你的token"
+uv run python setup.py
+```
 
-# macOS / Linux (bash)
+向导会：
+
+1. 收集上述四个变量（密钥输入不回显）
+2. 写入本地 `.env`（勿提交到 Git）
+3. 通过 `gh secret set` 同步到 GitHub Actions Secrets
+4. 可选：立即运行 `check_setup.py` 并发送一条 Lark 测试消息
+
+#### 方式二：手动配置 `.env`
+
+复制 [`.env.example`](./.env.example) 为 `.env` 并填入真实值：
+
+```bash
+cp .env.example .env
+# 编辑 .env
+```
+
+#### 验证配置
+
+本地检查 Tushare 连通性并发送 Lark 测试卡片：
+
+```bash
+uv run python check_setup.py
+```
+
+GitHub 上：**Actions → ✅ Check Setup → Run workflow**（需先在仓库 Settings → Secrets 中配置同名 Secret）。
+
+#### 临时环境变量（仅当前 shell）
+
+```bash
+# macOS / Linux
 export TUSHARE_TOKEN=你的token
+export LARK_APP_ID=...
+export LARK_SECRET=...
+export ME_UNION_ID=...
+
+# Windows (PowerShell)
+$env:TUSHARE_TOKEN = "你的token"
+```
+
+#### 带 Lark 推送的运行示例
+
+```bash
+uv run stock-select --data-dir ./data --send-lark
+uv run stock-detect-risk --data-dir ./data --send-lark
 ```
 
 ## 核心功能
@@ -419,6 +466,11 @@ python src/stock_trade_z/update_to_goodlist.py \
 
 ```bash
 .
+├── setup.py                          # 交互式配置向导（.env + GitHub Secrets）
+├── check_setup.py                    # 验证环境变量 / Tushare / Lark 测试消息
+├── .github/workflows/
+│  ├── daily-stock-trade.yml          # 每日选股 + 风控（定时 + 手动触发）
+│  └── check_setup.yml                # 配置检查（手动触发）
 ├── .vscode/                          # VS Code 配置
 │  ├── tasks.json                     # 任务配置（快捷运行脚本）
 │  ├── launch.json                    # 调试配置
@@ -454,11 +506,12 @@ python src/stock_trade_z/update_to_goodlist.py \
 │     ├── time.py                     # 时间处理工具
 │     ├── utils.py                    # 通用工具函数
 │     ├── constant.py                 # 常量定义
+│     ├── send_lark_message.py        # 飞书消息 / 交互卡片
 │     └── xueqiu.py                   # 雪球相关工具
 │
 ├── data/                             # K 线行情 CSV 输出目录
 ├── stocklist.good.csv                # 优选股票池（经过初步筛选）
-├── .env.example                      # 环境变量配置示例
+├── .env.example                      # 环境变量示例（Tushare + Lark）
 ├── pyproject.toml                    # 项目与 uv 依赖
 ├── uv.lock                           # 锁定依赖版本
 └── log/                              # 运行日志
@@ -507,6 +560,12 @@ uv run stock-detect-risk --data-dir ./data
 ---
 
 ## 常见问题
+
+**Q0：飞书收不到消息？**
+
+1. 运行 `uv run python check_setup.py`，确认四项环境变量与 Lark 测试卡片均成功。
+2. 确认应用已发布、机器人已加入目标会话，且 `ME_UNION_ID` 为接收人 union_id（非 open_id）。
+3. GitHub Actions 需在仓库 Secrets 中配置 `TUSHARE_TOKEN`、`LARK_APP_ID`、`LARK_SECRET`、`ME_UNION_ID`（可用 `setup.py` 一次性写入）。
 
 **Q1：为什么抓取会“卡住很久”？**
 可能命中 Tushare 频控或网络封禁。脚本检测到典型关键字（如“访问频繁/429/403”）时，会进入**长冷却（默认 600s）** 再重试。

@@ -17,6 +17,10 @@ load_dotenv(Path("./.env"))
 _client: lark.Client | None = None
 
 
+def lark_configured() -> bool:
+    return bool(os.getenv("LARK_APP_ID") and os.getenv("LARK_SECRET") and os.getenv("ME_UNION_ID"))
+
+
 def get_client() -> lark.Client:
     """Initialize and return the Lark client."""
     global _client
