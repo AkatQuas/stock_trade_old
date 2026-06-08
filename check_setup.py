@@ -9,20 +9,16 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-import pandas as pd
-import tushare as ts
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).parent
 load_dotenv(ROOT / ".env")
 
 from stock_trade_z.lib.fetch_data import fetch_one_data  # noqa: E402
-from stock_trade_z.lib.send_lark_message import (  # noqa: E402
-    build_interactive_card,
-    lark_configured,
-    send_message,
-)
-from stock_trade_z.lib.ts_pro_api import get_pro_api  # noqa: E402
+from stock_trade_z.lib.fetch_trend import fetch_pool  # noqa: E402
+from stock_trade_z.lib.lark_notify import send_report_as_doc  # noqa: E402
+from stock_trade_z.lib.llm import api_key_configured, ping  # noqa: E402
+from stock_trade_z.lib.send_lark_message import lark_configured  # noqa: E402
 
 OK = "✅"
 FAIL = "❌"
@@ -50,40 +46,64 @@ required = {
     "TUSHARE_TOKEN": os.getenv("TUSHARE_TOKEN"),
     "LARK_APP_ID": os.getenv("LARK_APP_ID"),
     "LARK_SECRET": os.getenv("LARK_SECRET"),
+    "LARK_FOLDER_TOKEN": os.getenv("LARK_FOLDER_TOKEN"),
     "ME_UNION_ID": os.getenv("ME_UNION_ID"),
+}
+optional = {
+    "DEEPSEEK_API_KEY": os.getenv("DEEPSEEK_API_KEY"),
 }
 for name, value in required.items():
     check(name, bool(value), "已设置" if value else "未找到")
+for name, value in optional.items():
+    print(f"  {'✅' if value else '⚪'}  {name}  ({'已设置' if value else '可选，LLM 复盘用'})")
 
 section("本地 .env")
 env_path = ROOT / ".env"
 check(".env 存在", env_path.exists(), str(env_path) if env_path.exists() else "运行 setup.py 生成")
 
-section("智图 API（日线 K 线）")
+section("TickFlow API（日线 K 线）")
+try:
+    df = fetch_one_data("000066", "20240701", "20240710")
+    check("TickFlow K 线连接成功", df is not None and len(df) > 0)
+except Exception as e:
+    check("TickFlow K 线连接", False, str(e))
+
+section("智图 API（股池 qsgc/ztgc）")
 if os.getenv("ZHITU_TOKEN"):
     try:
-        df = fetch_one_data("000066", "20240701", "20240710")
-        check("智图 API 连接成功", df is not None and len(df) > 0)
+        pool_df = fetch_pool("2024-07-10", "qsgc")
+        check("智图股池 API 连接成功", pool_df is not None)
     except Exception as e:
-        check("智图 API 连接", False, str(e))
+        check("智图股池 API 连接", False, str(e))
 else:
-    check("智图 API 连接（跳过，ZHITU_TOKEN 未设置）", False)
+    check("智图股池 API 连接（跳过，ZHITU_TOKEN 未设置）", False)
+
+section("DeepSeek LLM（可选）")
+if api_key_configured():
+    try:
+        ping()
+        check("DeepSeek API 连接成功", True)
+    except Exception as e:
+        check("DeepSeek API 连接", False, str(e))
+else:
+    print("  ⚪  DEEPSEEK_API_KEY 未设置（可选，--llm-analyze 时使用）")
 
 section("Tushare API（股票列表）")
 if os.getenv("TUSHARE_TOKEN"):
-    try:
-        ts_pro = get_pro_api()
-        df: pd.DataFrame | None = ts.pro_bar(
-            ts_code="000066.SZ",
-            adj="qfq",
-            start_date="20240701",
-            end_date="20240710",
-            freq="D",
-            api=ts_pro,
-        )
-        check("Tushare API 连接成功", df is not None and len(df) > 0)
-    except Exception as e:
-        check("Tushare API 连接", False, str(e))
+    pass
+    # try:
+    #     ts_pro = get_pro_api()
+    #     df: pd.DataFrame | None = ts.pro_bar(
+    #         ts_code="000066.SZ",
+    #         adj="qfq",
+    #         start_date="20240701",
+    #         end_date="20240710",
+    #         freq="D",
+    #         api=ts_pro,
+    #     )
+    #     check("Tushare API 连接成功", df is not None and len(df) > 0)
+    # except Exception as e:
+    #     check("Tushare API 连接", False, str(e))
 else:
     check("Tushare API 连接（跳过，TUSHARE_TOKEN 未设置）", False)
 
@@ -95,32 +115,21 @@ else:
     if not errors:
         try:
             now = datetime.now().strftime("%Y-%m-%d %H:%M")
-            card = build_interactive_card(
-                title="✅ Stock Trade Z — 配置验证成功",
-                fields=[
-                    {
-                        "is_short": False,
-                        "content": (
-                            f"环境已就绪，选股与风控结果可推送到 Lark。\n\n验证时间：{now}"
-                        ),
-                    },
-                    {
-                        "is_short": True,
-                        "content": "**智图 / Tushare**\n已配置",
-                    },
-                    {
-                        "is_short": True,
-                        "content": "**飞书机器人**\n已配置",
-                    },
-                ],
-                template="green",
+            markdown = (
+                f"# Stock Trade Z 配置验证成功\n\n"
+                f"验证时间：{now}\n\n"
+                f"- TickFlow K 线\n"
+                f"- 智图股池 (qsgc/ztgc)\n"
+                f"- Tushare 股票列表\n"
+                f"- 飞书机器人 + 云文档\n"
             )
-            ok_send = send_message(
+            ok_send = send_report_as_doc(
+                title=f"配置验证 {now[:10]}",
+                markdown=markdown,
+                summary="✅ Stock Trade Z — 配置验证成功",
                 receive_id=os.getenv("ME_UNION_ID"),
-                content=card,
-                msg_type="interactive",
             )
-            check("测试 Lark 消息已发送", ok_send)
+            check("测试 Lark 文档通知已发送", ok_send)
         except Exception as e:
             check("发送测试 Lark 消息", False, str(e))
     else:

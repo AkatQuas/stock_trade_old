@@ -77,8 +77,11 @@ uv run pre-commit run --all-files  # 手动全量跑一遍
 | 命令 | 说明 |
 |------|------|
 | `stock-fetch-list` | 拉取全市场股票列表 |
-| `stock-fetch-kline` | 下载日线 K 线 CSV |
-| `stock-select` | 批量选股 |
+| `stock-fetch-kline` | 下载日线 K 线 CSV（TickFlow） |
+| `stock-fetch-trend` | 拉取智图强势股/涨停股池快照 |
+| `stock-fetch-pool-kline` | 下载股池标的 K 线（TickFlow → `data-pool/`） |
+| `stock-select` | 批量选股（正常战法） |
+| `stock-select-pool` | 股池选股（`pool_selector.config.json`） |
 | `stock-detect-risk` | 批量风险检测 |
 | `stock-check` | 单只股票战法检查 |
 
@@ -86,14 +89,17 @@ uv run pre-commit run --all-files  # 手动全量跑一遍
 
 ### 环境变量与飞书（推荐 setup 向导）
 
-选股 / 风控支持 `--send-lark` 推送飞书卡片，每日 GitHub Actions 工作流也会用到相同配置。需要准备：
+选股 / 风控 / 股池选股支持 `--send-lark`：在飞书云文档中生成 Markdown 报告，再由机器人发送文档链接。每日 GitHub Actions 工作流使用相同配置。需要准备：
 
 | 变量 | 说明 |
 |------|------|
-| `TUSHARE_TOKEN` | [TuShare](https://tushare.pro/user/token) 数据接口 Token |
+| `TUSHARE_TOKEN` | [TuShare](https://tushare.pro/user/token) 股票列表 Token |
+| `ZHITU_TOKEN` | [智图 API](https://www.zhituapi.com/get-free-cert.html) 股池快照（qsgc/ztgc） |
 | `LARK_APP_ID` | [飞书开放平台](https://open.feishu.cn/app) 应用 App ID |
 | `LARK_SECRET` | 飞书应用 App Secret |
-| `ME_UNION_ID` | 接收人的 `union_id`（应用需开通 `im:message` 权限） |
+| `LARK_FOLDER_TOKEN` | 云文档存放文件夹 token（见 [lark-doc.md](./lark-doc.md)） |
+| `ME_UNION_ID` | 接收人的 `union_id`（需 `im:message` + 文档读写权限） |
+| `DEEPSEEK_API_KEY` | 可选；`--llm-analyze` LLM 复盘 |
 
 #### 方式一：交互式配置向导（推荐）
 
@@ -105,7 +111,7 @@ uv run python setup.py
 
 向导会：
 
-1. 收集上述四个变量（密钥输入不回显）
+1. 收集上述变量（密钥输入不回显）
 2. 写入本地 `.env`（勿提交到 Git）
 3. 通过 `gh secret set` 同步到 GitHub Actions Secrets
 4. 可选：立即运行 `check_setup.py` 并发送一条 Lark 测试消息
@@ -121,7 +127,7 @@ cp .env.example .env
 
 #### 验证配置
 
-本地检查 Tushare 连通性并发送 Lark 测试卡片：
+本地检查 Tushare / TickFlow / 智图股池连通性，并发送 Lark 测试文档通知：
 
 ```bash
 uv run python check_setup.py
@@ -136,6 +142,7 @@ GitHub 上：**Actions → ✅ Check Setup → Run workflow**（需先在仓库 
 export TUSHARE_TOKEN=你的token
 export LARK_APP_ID=...
 export LARK_SECRET=...
+export LARK_FOLDER_TOKEN=...
 export ME_UNION_ID=...
 
 # Windows (PowerShell)
@@ -145,7 +152,8 @@ $env:TUSHARE_TOKEN = "你的token"
 #### 带 Lark 推送的运行示例
 
 ```bash
-uv run stock-select --data-dir ./data --send-lark
+uv run stock-select --data-dir ./data --send-lark --llm-analyze
+uv run stock-select-pool --data-dir ./data-pool --trend-dir ./trend --send-lark --llm-analyze
 uv run stock-detect-risk --data-dir ./data --send-lark
 ```
 
@@ -161,7 +169,7 @@ python src/stock_trade_z/fetch_stocklist.py
 
 ### 2. 下载历史 K 线（qfq，日线）
 
-- **数据源固定**：Tushare 日线，**前复权 qfq**。
+- **数据源**：TickFlow 日线，**前复权 qfq**（Tushare 仅用于股票列表）。
 - **保存策略**：每只股票**全量覆盖写入** `./data/XXXXXX.csv`。
 - **并发抓取**：默认 6 线程；支持封禁冷却（命中「访问频繁/429/403…」将睡眠约 600s 并重试，最多 3 次）。
 - **频控处理**：低积分的 token 可能每分钟可调用的接口次数有限，提前对请求做了睡眠处理
@@ -506,7 +514,10 @@ python src/stock_trade_z/update_to_goodlist.py \
 │     ├── time.py                     # 时间处理工具
 │     ├── utils.py                    # 通用工具函数
 │     ├── constant.py                 # 常量定义
-│     ├── send_lark_message.py        # 飞书消息 / 交互卡片
+│     ├── lark_doc.py                 # 飞书云文档创建与 Markdown 写入
+│     ├── lark_notify.py              # 文档报告 + 机器人链接通知
+│     ├── lark_report.py              # 选股/风控 Markdown 报告
+│     ├── send_lark_message.py        # 飞书机器人消息
 │     └── xueqiu.py                   # 雪球相关工具
 │
 ├── data/                             # K 线行情 CSV 输出目录
@@ -524,7 +535,7 @@ python src/stock_trade_z/update_to_goodlist.py \
 1. **`load_data_folder`**：从 `--data-dir` 读取每只股票的 CSV，归一化 `date`，确定交易日。
 2. **`load_selectors`**：读取 `selector.config.json` 中的 `selectors`（Z 战法）与 `quant_selectors`（主流量化策略），按 `class` 动态实例化并全部运行。
 3. **并行扫描**：每个 Selector 对全市场调用 `select(date, data)`，内部用 `parallel_select_helper` 多进程执行 `_passes_filters(hist)`。
-4. **结果汇总**：命中代码与 `stocklist.total.csv` 合并名称/雪球链接，写日志；`--send-lark` 时推送飞书卡片。
+4. **结果汇总**：命中代码与 `stocklist.total.csv` 合并名称/雪球链接，写日志；`--send-lark` 时创建飞书云文档并推送链接。
 
 新增 **quant_selectors**（`lib/quant_selectors.py`，可在配置中 `activate: false` 关闭）：
 
@@ -563,9 +574,9 @@ uv run stock-detect-risk --data-dir ./data
 
 **Q0：飞书收不到消息？**
 
-1. 运行 `uv run python check_setup.py`，确认四项环境变量与 Lark 测试卡片均成功。
-2. 确认应用已发布、机器人已加入目标会话，且 `ME_UNION_ID` 为接收人 union_id（非 open_id）。
-3. GitHub Actions 需在仓库 Secrets 中配置 `TUSHARE_TOKEN`、`LARK_APP_ID`、`LARK_SECRET`、`ME_UNION_ID`（可用 `setup.py` 一次性写入）。
+1. 运行 `uv run python check_setup.py`，确认环境变量与 Lark 测试文档通知均成功。
+2. 确认应用已发布、已开通 `docx:document` / `docx:document:create` / 云文档权限相关 scope，机器人可发消息，且 `ME_UNION_ID` 为接收人 union_id（非 open_id）。
+3. GitHub Actions 需在仓库 Secrets 中配置 `TUSHARE_TOKEN`、`ZHITU_TOKEN`、`LARK_APP_ID`、`LARK_SECRET`、`LARK_FOLDER_TOKEN`、`ME_UNION_ID`（可用 `setup.py` 一次性写入）。
 
 **Q1：为什么抓取会“卡住很久”？**
 可能命中 Tushare 频控或网络封禁。脚本检测到典型关键字（如“访问频繁/429/403”）时，会进入**长冷却（默认 600s）** 再重试。

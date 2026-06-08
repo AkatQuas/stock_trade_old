@@ -21,7 +21,9 @@ jobs:
         env:
           TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
           ZHITU_TOKEN: ${{ secrets.ZHITU_TOKEN }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           LARK_APP_ID: ${{ secrets.LARK_APP_ID }}
           LARK_SECRET: ${{ secrets.LARK_SECRET }}
+          LARK_FOLDER_TOKEN: ${{ secrets.LARK_FOLDER_TOKEN }}
           ME_UNION_ID: ${{ secrets.ME_UNION_ID }}
         run: uv run python check_setup.py

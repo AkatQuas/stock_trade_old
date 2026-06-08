@@ -97,7 +97,7 @@ class BSClient:
 
     def fetch_one_data(self, code: str, start: str, end: str | None = None) -> pd.DataFrame | None:
         """
-        @deprecated
+        .. deprecated::
         """
         if not self.is_logged_in and not self.login():
             return None

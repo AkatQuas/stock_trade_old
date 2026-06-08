@@ -146,7 +146,11 @@ def main():
         sys.exit(1)
     ok("GitHub CLI 已认证")
 
-    section("智图 API（日线 K 线）")
+    section("DeepSeek API")
+    print(dim("  申请 API Key：https://platform.deepseek.com/api_keys"))
+    api_key = ask("粘贴你的 DEEPSEEK_API_KEY", secret=True)
+
+    section("智图 API（股池 qsgc/ztgc）")
     print(dim("  申请 Token：https://www.zhituapi.com/get-free-cert.html"))
     zhitu_token = ask("粘贴你的 ZHITU_TOKEN", secret=True)
 
@@ -156,29 +160,38 @@ def main():
 
     section("Lark 配置")
     print(dim("  在飞书开放平台创建应用：https://open.feishu.cn/app"))
-    print(dim("  需开通 im:message 权限，ME_UNION_ID 为接收人的 union_id"))
+    print(
+        dim(
+            "  需开通 im:message | docx:document | docx:document.block:convert 权限，ME_UNION_ID 为接收人的 union_id"
+        )
+    )
     lark_app_id = ask("LARK_APP_ID")
     lark_secret = ask("LARK_SECRET", secret=True)
+    lark_folder_token = ask("LARK_FOLDER_TOKEN")
     me_union_id = ask("ME_UNION_ID（接收人 union_id）")
 
     section("写入本地 .env")
     update_env_file(
         {
+            "DEEPSEEK_API_KEY": api_key,
             "ZHITU_TOKEN": zhitu_token,
             "TUSHARE_TOKEN": tushare_token,
             "LARK_APP_ID": lark_app_id,
             "LARK_SECRET": lark_secret,
             "ME_UNION_ID": me_union_id,
+            "LARK_FOLDER_TOKEN": lark_folder_token,
         }
     )
     ok(f"已更新 {ENV_PATH.name}")
 
     section("写入 GitHub Secrets")
     secrets = {
+        "DEEPSEEK_API_KEY": api_key,
         "ZHITU_TOKEN": zhitu_token,
         "TUSHARE_TOKEN": tushare_token,
         "LARK_APP_ID": lark_app_id,
         "LARK_SECRET": lark_secret,
+        "LARK_FOLDER_TOKEN": lark_folder_token,
         "ME_UNION_ID": me_union_id,
     }
     all_ok = True

@@ -1,42 +1,17 @@
 from __future__ import annotations
 
 import argparse
-import os
 from pathlib import Path
 
 from stock_trade_z.lib.data_utils import load_data_folder
+from stock_trade_z.lib.lark_notify import send_report_as_doc
+from stock_trade_z.lib.lark_report import build_risk_report_md
 from stock_trade_z.lib.load_risk import load_risk_selectors
 from stock_trade_z.lib.load_stocklist import load_total_stocklist
 from stock_trade_z.lib.logger import get_logger
-from stock_trade_z.lib.send_lark_message import build_interactive_card, send_message
 from stock_trade_z.lib.time import get_today_name
 
 logger = get_logger("risk")
-
-
-def build_lark_card(trade_date, aggregated: dict[str, list[str]], stocklist: list) -> dict:
-    """Build an interactive card for Lark with risk detection results."""
-    title = f"⚠️ 风险检测 - {trade_date.date()} {trade_date.day_name()}"
-
-    if not aggregated:
-        fields = [{"is_short": False, "content": "✅ 未检测到风险股票"}]
-        return build_interactive_card(title=title, fields=fields)
-
-    fields = []
-    for code, reasons in sorted(aggregated.items(), key=lambda kv: len(kv[1]), reverse=True):
-        info = next((s for s in stocklist if s["symbol"] == code), None)
-        if info:
-            name = info.get("name", "")
-            url = info.get("xueqiu_url", "")
-            reason_str = ", ".join(reasons)
-            fields.append(
-                {
-                    "is_short": False,
-                    "content": f"[**{code} {name}**]({url})\n{len(reasons)}个风险: {reason_str}",
-                }
-            )
-
-    return build_interactive_card(title=title, fields=fields, template="yellow")
 
 
 def main():
@@ -97,16 +72,13 @@ def main():
         logger.info("No risky symbols detected by selectors.")
 
     if args.send_lark:
-        card = build_lark_card(trade_date, aggregated, stocklist)
-        receive_id = os.getenv("ME_UNION_ID")
-        if receive_id:
-            success = send_message(receive_id, card, msg_type="interactive")
-            if success:
-                logger.info("✅ 已发送风险检测结果到Lark")
-            else:
-                logger.error("❌ 发送Lark通知失败")
+        title = f"风险检测 {trade_date.date()}"
+        markdown = build_risk_report_md(trade_date, aggregated, stocklist)
+        summary = f"⚠️ 风险检测 — {trade_date.date()} {trade_date.day_name()}"
+        if send_report_as_doc(title=title, markdown=markdown, summary=summary):
+            logger.info("✅ 已发送风险检测报告文档链接到 Lark")
         else:
-            logger.warning("ME_UNION_ID 未配置，跳过Lark通知")
+            logger.error("❌ 发送 Lark 通知失败")
 
     logger.info("Done. %s", get_today_name())
 

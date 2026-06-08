@@ -1,0 +1,60 @@
+{
+  "pool_selectors": [
+    {
+      "class": "EarlySealSelector",
+      "alias": "早盘封板",
+      "pool": "ztgc",
+      "params": {
+        "max_fbt": "10:00:00",
+        "max_zbc": 0
+      }
+    },
+    {
+      "class": "ContinuationBoardSelector",
+      "alias": "连板延续",
+      "pool": "ztgc",
+      "params": {
+        "min_lbc": 2,
+        "max_zbc": 1
+      }
+    },
+    {
+      "class": "FirstBoardLeaderSelector",
+      "alias": "首板龙头",
+      "pool": "ztgc",
+      "params": {
+        "max_fbt": "10:30:00",
+        "hs_min": 3.0,
+        "hs_max": 25.0
+      }
+    },
+    {
+      "class": "NewHighMomentumSelector",
+      "alias": "新高强势",
+      "pool": "qsgc",
+      "params": {
+        "min_zs": 1.0,
+        "min_lb": 1.5
+      }
+    },
+    {
+      "class": "NearLimitMomentumSelector",
+      "alias": "贴近涨停",
+      "pool": "qsgc",
+      "params": {
+        "max_dist_to_limit": 0.02,
+        "min_zf": 5.0
+      }
+    },
+    {
+      "class": "VolumeBreakoutSelector",
+      "alias": "强势放量",
+      "pool": "qsgc",
+      "params": {
+        "hs_min": 5.0,
+        "vol_lookback": 5,
+        "vol_multiple": 1.5
+      }
+    }
+  ]
+}

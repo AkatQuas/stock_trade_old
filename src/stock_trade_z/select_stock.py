@@ -1,38 +1,20 @@
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
 from stock_trade_z.lib.data_utils import load_data_folder
+from stock_trade_z.lib.lark_notify import send_report_as_doc
+from stock_trade_z.lib.lark_report import build_select_report_md
+from stock_trade_z.lib.llm_analyze import analyze_picks, format_llm_lark_section
+from stock_trade_z.lib.llm_context import build_pick_records
 from stock_trade_z.lib.load_selector import load_selectors
 from stock_trade_z.lib.load_stocklist import load_total_stocklist
 from stock_trade_z.lib.logger import get_logger
-from stock_trade_z.lib.send_lark_message import build_interactive_card, send_message
 from stock_trade_z.lib.time import get_today_name
 
 logger = get_logger("select")
-
-
-def build_lark_card(trade_date, results: list[dict]) -> dict:
-    """Build an interactive card for Lark with selection results."""
-    title = f"📈 选股结果 - {trade_date.date()} {trade_date.day_name()}"
-
-    fields = []
-    if not results:
-        fields.append({"is_short": False, "content": "❌ 本轮无选股结果"})
-        return build_interactive_card(title=title, fields=fields, template="carmine")
-
-    for r in results:
-        stock_names = "\n".join([f"{s['name']} - {s['url']}" for s in r["stocks"]])
-        fields.append(
-            {
-                "is_short": False,
-                "content": f"**{r['selector']}** ({r['count']}只)\n{stock_names}",
-            }
-        )
-    return build_interactive_card(title=title, fields=fields)
 
 
 def main():
@@ -40,6 +22,10 @@ def main():
     p.add_argument("--data-dir", type=Path, required=True, help="行情数据目录， CSV K线数据")
     p.add_argument("--date", help="交易日 YYYY-MM-DD ，默认=数据最新日期")
     p.add_argument("--send-lark", action="store_true", help="发送Lark通知")
+    p.add_argument(
+        "--llm-analyze", action="store_true", help="DeepSeek 排序复盘（需 DEEPSEEK_API_KEY）"
+    )
+    p.add_argument("--llm-max", type=int, default=20, help="送入 LLM 的最大标的数")
     args = p.parse_args()
 
     data_dir = Path(args.data_dir)
@@ -54,7 +40,6 @@ def main():
         sys.exit(1)
 
     selector_dict = load_selectors()
-
     stocklist = load_total_stocklist()
 
     logger.info(
@@ -95,17 +80,26 @@ def main():
 
     logger.info("🤖 选股结束，下次再来。 %s 🏖️️ 🏖️\n", get_today_name())
 
+    llm_section = None
+    if args.llm_analyze and all_results:
+        records = build_pick_records(
+            track="normal",
+            trade_date=trade_date,
+            results=all_results,
+            data=data,
+            max_stocks=args.llm_max,
+        )
+        analysis = analyze_picks(records, trade_date, track="normal")
+        llm_section = format_llm_lark_section(analysis)
+
     if args.send_lark:
-        card = build_lark_card(trade_date, all_results)
-        receive_id = os.getenv("ME_UNION_ID")
-        if receive_id:
-            success = send_message(receive_id, card, msg_type="interactive")
-            if success:
-                logger.info("✅ 已发送选股结果到Lark")
-            else:
-                logger.error("❌ 发送Lark通知失败")
+        title = f"选股结果 {trade_date.date()}"
+        markdown = build_select_report_md(trade_date, all_results, llm_section)
+        summary = f"📈 选股结果 — {trade_date.date()} {trade_date.day_name()}"
+        if send_report_as_doc(title=title, markdown=markdown, summary=summary):
+            logger.info("✅ 已发送选股报告文档链接到 Lark")
         else:
-            logger.warning("ME_UNION_ID 未配置，跳过Lark通知")
+            logger.error("❌ 发送 Lark 通知失败")
 
 
 if __name__ == "__main__":

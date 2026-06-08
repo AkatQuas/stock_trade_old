@@ -16,8 +16,10 @@ jobs:
       TQDM_DISABLE: '1'
       TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
       ZHITU_TOKEN: ${{ secrets.ZHITU_TOKEN }}
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
       LARK_APP_ID: ${{secrets.LARK_APP_ID}}
       LARK_SECRET: ${{secrets.LARK_SECRET}}
+      LARK_FOLDER_TOKEN: ${{ secrets.LARK_FOLDER_TOKEN }}
       ME_UNION_ID: ${{secrets.ME_UNION_ID}}
 
     steps:
@@ -26,19 +28,30 @@ jobs:
         with:
           fetch-depth: 1
 
-      # uv is pre-installed in the container - no setup needed
       - name: Install dependencies with uv sync
         run: |
           uv sync
 
-      - name: Fetch stock data
+      - name: Fetch normal stock K-line (TickFlow)
         run: |
           uv run stock-fetch-kline --start 20240101 --stocklist ./stocklist.good.csv --out ./data
 
-      - name: Select potential stock
+      - name: Fetch trend pools (Zhitu qsgc/ztgc)
         run: |
-          uv run stock-select --data-dir ./data --send-lark
+          uv run stock-fetch-trend --date today --out ./trend
+
+      - name: Fetch pool K-line (TickFlow)
+        run: |
+          uv run stock-fetch-pool-kline --trend-dir ./trend --out ./data-pool
+
+      - name: Select potential stock (normal)
+        run: |
+          uv run stock-select --data-dir ./data --send-lark --llm-analyze
 
       - name: Detect risk stock
         run: |
           uv run stock-detect-risk --data-dir ./data --send-lark
+
+      - name: Select pool stock (qsgc/ztgc)
+        run: |
+          uv run stock-select-pool --data-dir ./data-pool --trend-dir ./trend --send-lark --llm-analyze

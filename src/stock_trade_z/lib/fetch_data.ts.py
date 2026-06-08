@@ -61,6 +61,8 @@ def fetch_one_data(
 ) -> pd.DataFrame | None:
     """
     fetch data for stock `code`
+
+    .. deprecated::
     """
     logger = get_logger("fetch")
     for attempt in range(1, 4):

@@ -22,6 +22,7 @@ dependencies = [
   "lark-oapi>=1.6.5",
   "numpy>=1.26",
   "tickflow[all]>=0.1.22",
+  "openai>=2.41.0",
 ]
 
 [project.optional-dependencies]
@@ -30,7 +31,10 @@ dev = ["ruff>=0.9", "pre-commit>=4.0"]
 [project.scripts]
 stock-fetch-list = "stock_trade_z.fetch_stocklist:main"
 stock-fetch-kline = "stock_trade_z.fetch_kline:main"
+stock-fetch-trend = "stock_trade_z.fetch_trend_pools:main"
+stock-fetch-pool-kline = "stock_trade_z.fetch_pool_kline:main"
 stock-select = "stock_trade_z.select_stock:main"
+stock-select-pool = "stock_trade_z.select_pool:main"
 stock-detect-risk = "stock_trade_z.detect_risk:main"
 stock-check = "stock_trade_z.check_code:main"
 
@@ -44,6 +48,7 @@ packages = ["src/stock_trade_z"]
 [tool.hatch.build.targets.sdist]
 include = [
   "src/stock_trade_z/selector.config.json",
+  "src/stock_trade_z/pool_selector.config.json",
   "src/stock_trade_z/risk.config.json",
   "src/stock_trade_z/stocklist.total.csv",
 ]
