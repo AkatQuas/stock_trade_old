@@ -93,26 +93,19 @@
       "problemMatcher": []
     },
     {
-      "label": "Detect Risk Stock",
-      "command": "uv",
-      "type": "shell",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "args": ["run", "stock-detect-risk", "--data-dir", "./data"],
-      "presentation": {
-        "reveal": "always"
-      },
-      "problemMatcher": []
-    },
-    {
       "label": "Detect Risk Stock (send Lark)",
       "command": "uv",
       "type": "shell",
       "options": {
         "cwd": "${workspaceFolder}"
       },
-      "args": ["run", "stock-detect-risk", "--data-dir", "./data", "--send-lark"],
+      "args": [
+        "run",
+        "stock-detect-risk",
+        "--data-dir",
+        "./data",
+        "--send-lark"
+      ],
       "presentation": {
         "reveal": "always"
       },

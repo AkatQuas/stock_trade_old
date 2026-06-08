@@ -12,6 +12,7 @@ license = { text = "MIT" }
 authors = [{ name = "stock_trade_z contributors" }]
 dependencies = [
   "pandas>=2.2,<3",
+  "requests>=2.31",
   "tqdm>=4.66",
   "tushare>=1.4",
   "scipy>=1.11",
@@ -20,6 +21,7 @@ dependencies = [
   "baostock>=0.8.9",
   "lark-oapi>=1.6.5",
   "numpy>=1.26",
+  "tickflow[all]>=0.1.22",
 ]
 
 [project.optional-dependencies]
@@ -31,6 +33,10 @@ stock-fetch-kline = "stock_trade_z.fetch_kline:main"
 stock-select = "stock_trade_z.select_stock:main"
 stock-detect-risk = "stock_trade_z.detect_risk:main"
 stock-check = "stock_trade_z.check_code:main"
+
+[[tool.uv.index]]
+url = "https://pypi.tuna.tsinghua.edu.cn/simple/"
+default = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/stock_trade_z"]
@@ -47,10 +53,6 @@ package = true
 
 [dependency-groups]
 dev = ["ruff>=0.9", "pre-commit>=4.0"]
-
-[[tool.uv.index]]
-url = "https://pypi.tuna.tsinghua.edu.cn/simple/"
-default = true
 
 [tool.ruff]
 line-length = 100

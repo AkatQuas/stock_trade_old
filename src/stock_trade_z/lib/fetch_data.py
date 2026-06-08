@@ -1,19 +1,33 @@
+import random
 import time
 
 import pandas as pd
-import tushare as ts
+import requests
 
 from .constant import COLUMNS, RateLimitError
 from .load_stocklist import code2ts_code
 from .logger import get_logger
-from .time import validate
-from .ts_pro_api import get_pro_api
-from .utils import cool_sleep, looks_like_ip_ban
+from .rate_limit import SlidingWindowRateLimiter
+from .time import get_today_date, validate
+from .utils import looks_like_ip_ban, random_sleep_50_to_150ms
+from .zhitu_api import get_zhitu_token
+
+ZHITU_HISTORY_URL = "https://api.zhituapi.com/hs/history/{ts_code}/d/f"
+MAX_RETRIES = 3
+REQUEST_TIMEOUT = 30
+
+_zhitu_rate_limiter = SlidingWindowRateLimiter(max_calls=50, period_seconds=60.0)
 
 
-def _get_kline_tushare(code: str, start: str, end: str) -> pd.DataFrame:
+def _normalize_date(date: str) -> str:
+    if str(date).lower() == "today":
+        return get_today_date()
+    return str(date)
+
+
+def _get_kline_zhitu(code: str, start: str, end: str) -> pd.DataFrame:
     """
-    下载股票数据
+    从智图 API 下载日线前复权 K 线。
 
     参数:
         code: 股票代码 (如: 600000, 000001)
@@ -21,36 +35,71 @@ def _get_kline_tushare(code: str, start: str, end: str) -> pd.DataFrame:
         end: 结束日期 (YYYYMMDD)
 
     返回:
-        DataFrame: 股票数据，失败返回None
+        DataFrame: 股票数据，无数据时返回空表
     """
-    ts_pro = get_pro_api()
+    random_sleep_50_to_150ms()
+    _zhitu_rate_limiter.acquire()
+
     ts_code = code2ts_code(code)
+    url = ZHITU_HISTORY_URL.format(ts_code=ts_code)
+    params = {
+        "token": get_zhitu_token(),
+        "st": _normalize_date(start),
+        "et": _normalize_date(end),
+    }
+
     try:
-        df: pd.DataFrame | None = ts.pro_bar(
-            ts_code=ts_code,
-            adj="qfq",
-            start_date=start,
-            end_date=end,
-            freq="D",
-            api=ts_pro,
-            # factors=["tor"]
-        )
+        response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
+        response.raise_for_status()
+        payload = response.json()
+    except requests.HTTPError as e:
+        if looks_like_ip_ban(e) or (e.response is not None and e.response.status_code == 429):
+            raise RateLimitError(str(e)) from e
+        raise
     except Exception as e:
         if looks_like_ip_ban(e):
             raise RateLimitError(str(e)) from e
         raise
 
-    if df is None or df.empty:
+    if payload is None:
         return pd.DataFrame()
 
-    df = df.rename(columns={"trade_date": "date", "vol": "volume"})[COLUMNS].copy()
+    if isinstance(payload, dict):
+        msg = str(payload.get("msg") or payload.get("message") or payload)
+        if looks_like_ip_ban(Exception(msg)):
+            raise RateLimitError(msg)
+        raise RuntimeError(f"智图 API 返回错误: {msg}")
+
+    if not isinstance(payload, list) or len(payload) == 0:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(payload)
+    rename_map = {
+        "t": "date",
+        "o": "open",
+        "h": "high",
+        "l": "low",
+        "c": "close",
+        "v": "volume",
+        "a": "amount",
+        "pc": "pc",
+    }
+    df = df.rename(columns=rename_map)
+
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    for c in ["open", "high", "low", "close", "pct_chg"]:
-        df[c] = pd.to_numeric(df[c], errors="coerce")
-    # 成交量：整数（手），先填充 NaN 为 0 再转换
-    df["volume"] = pd.to_numeric(df["volume"], errors="coerce").fillna(0).astype(int)
-    # 成交额：保留2位小数（元），NaN 填充为 0
-    df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0).round(2)
+    for col in ["open", "high", "low", "close", "volume", "amount", "pc"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    pc = df["pc"]
+    close = df["close"]
+    df["pct_chg"] = ((close - pc) / pc * 100).where(pc > 0)
+
+    df = df[COLUMNS].copy()
+    df["volume"] = df["volume"].fillna(0).astype(int)
+    df["amount"] = df["amount"].fillna(0).round(2)
+    for col in ["open", "high", "low", "close", "pct_chg"]:
+        df[col] = df[col].round(2)
+
     return df.sort_values("date").reset_index(drop=True)
 
 
@@ -63,20 +112,36 @@ def fetch_one_data(
     fetch data for stock `code`
     """
     logger = get_logger("fetch")
-    for attempt in range(1, 4):
+    start = _normalize_date(start)
+    end = _normalize_date(end)
+
+    for attempt in range(1, MAX_RETRIES + 1):
         try:
-            new_df = _get_kline_tushare(code, start, end)
+            new_df = _get_kline_zhitu(code, start, end)
             if new_df.empty:
                 logger.debug("%s 无数据，生成空表。", code)
                 new_df = pd.DataFrame(columns=COLUMNS)
             return validate(new_df)
+        except RateLimitError as e:
+            wait = random.uniform(3.0, 8.0) * attempt
+            logger.warning(
+                "%s 第 %d 次抓取命中限流: %s，%.1f 秒后重试",
+                code,
+                attempt,
+                e,
+                wait,
+            )
+            time.sleep(wait)
         except Exception as e:
-            if looks_like_ip_ban(e):
-                logger.error(f"{code} 第 {attempt} 次抓取疑似被封禁，沉睡")
-                cool_sleep()
-            else:
-                silent_seconds = 15 * attempt
-                logger.info(f"{code} 第 {attempt} 次抓取失败: {e}. \n{silent_seconds} 秒后重试")
-                time.sleep(silent_seconds)
+            wait = random.uniform(1.0, 4.0) * attempt
+            logger.info(
+                "%s 第 %d 次抓取失败: %s，%.1f 秒后重试",
+                code,
+                attempt,
+                e,
+                wait,
+            )
+            time.sleep(wait)
     else:
+        logger.error("%s 抓取失败，已跳过（不影响其他任务）", code)
         return None

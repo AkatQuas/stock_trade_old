@@ -41,7 +41,7 @@ def save_one_data(
 # --------------------------- 主入口 --------------------------- #
 def main():
     parser = argparse.ArgumentParser(
-        description="从 stocklist.csv 读取股票池并用 Tushare 抓取日线K线（固定qfq，全量覆盖）"
+        description="从 stocklist.csv 读取股票池并用智图 API 抓取日线K线（前复权，全量覆盖）"
     )
     # 抓取范围
     parser.add_argument("--start", default="20250101", help="起始日期 YYYYMMDD 或 'today'")
@@ -65,13 +65,13 @@ def main():
     parser.add_argument(
         "--chunk",
         type=int,
-        default=48,
+        default=32,
         help="单次请求的 chunk 大小，避免命中频控限制，默认为 48 个一组",
     )
     parser.add_argument(
         "--chunk_sleep",
         type=int,
-        default=65,
+        default=70,
         help="每个 chunk 请求之间的睡眠时长，默认为 65 秒，设置为 0 则不睡眠",
     )
     args = parser.parse_args()
@@ -93,7 +93,7 @@ def main():
     out_dir = ensure_folder(args.out)
 
     logger.info(
-        "开始抓取 %d 支股票 | 数据源:Tushare(日线,qfq) | 日期:%s → %s | 排除:%s",
+        "开始抓取 %d 支股票 | 数据源:智图(日线,前复权) | 日期:%s → %s | 排除:%s",
         len(stock_list),
         start,
         end,

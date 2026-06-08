@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).parent
 load_dotenv(ROOT / ".env")
 
+from stock_trade_z.lib.fetch_data import fetch_one_data  # noqa: E402
 from stock_trade_z.lib.send_lark_message import (  # noqa: E402
     build_interactive_card,
     lark_configured,
@@ -45,6 +46,7 @@ def section(title: str) -> None:
 
 section("环境变量 / GitHub Secrets")
 required = {
+    "ZHITU_TOKEN": os.getenv("ZHITU_TOKEN"),
     "TUSHARE_TOKEN": os.getenv("TUSHARE_TOKEN"),
     "LARK_APP_ID": os.getenv("LARK_APP_ID"),
     "LARK_SECRET": os.getenv("LARK_SECRET"),
@@ -57,7 +59,17 @@ section("本地 .env")
 env_path = ROOT / ".env"
 check(".env 存在", env_path.exists(), str(env_path) if env_path.exists() else "运行 setup.py 生成")
 
-section("Tushare API")
+section("智图 API（日线 K 线）")
+if os.getenv("ZHITU_TOKEN"):
+    try:
+        df = fetch_one_data("000066", "20240701", "20240710")
+        check("智图 API 连接成功", df is not None and len(df) > 0)
+    except Exception as e:
+        check("智图 API 连接", False, str(e))
+else:
+    check("智图 API 连接（跳过，ZHITU_TOKEN 未设置）", False)
+
+section("Tushare API（股票列表）")
 if os.getenv("TUSHARE_TOKEN"):
     try:
         ts_pro = get_pro_api()
@@ -65,10 +77,9 @@ if os.getenv("TUSHARE_TOKEN"):
             ts_code="000066.SZ",
             adj="qfq",
             start_date="20240701",
-            end_date="20260601",
+            end_date="20240710",
             freq="D",
             api=ts_pro,
-            # factors=["tor"]
         )
         check("Tushare API 连接成功", df is not None and len(df) > 0)
     except Exception as e:
@@ -95,7 +106,7 @@ else:
                     },
                     {
                         "is_short": True,
-                        "content": "**Tushare**\n已配置",
+                        "content": "**智图 / Tushare**\n已配置",
                     },
                     {
                         "is_short": True,

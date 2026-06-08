@@ -20,6 +20,7 @@ jobs:
       - name: Run setup check
         env:
           TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
+          ZHITU_TOKEN: ${{ secrets.ZHITU_TOKEN }}
           LARK_APP_ID: ${{ secrets.LARK_APP_ID }}
           LARK_SECRET: ${{ secrets.LARK_SECRET }}
           ME_UNION_ID: ${{ secrets.ME_UNION_ID }}

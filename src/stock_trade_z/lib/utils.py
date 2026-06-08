@@ -11,6 +11,7 @@ BAN_PATTERNS = (
     "访问频繁",
     "请稍后",
     "超过频率",
+    "频率超限",
     "频繁访问",
     "too many requests",
     "429",
@@ -21,7 +22,7 @@ BAN_PATTERNS = (
 
 
 def random_sleep_50_to_150ms():
-    sleep_seconds = random.uniform(20 / 1000.0, 120 / 1000.0)
+    sleep_seconds = random.uniform(50 / 1000.0, 150 / 1000.0)
     time.sleep(sleep_seconds)
 
 

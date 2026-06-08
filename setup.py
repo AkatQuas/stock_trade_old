@@ -146,7 +146,11 @@ def main():
         sys.exit(1)
     ok("GitHub CLI 已认证")
 
-    section("Tushare API")
+    section("智图 API（日线 K 线）")
+    print(dim("  申请 Token：https://www.zhituapi.com/get-free-cert.html"))
+    zhitu_token = ask("粘贴你的 ZHITU_TOKEN", secret=True)
+
+    section("Tushare API（股票列表）")
     print(dim("  申请 Token：https://tushare.pro/weborder/#/user/info"))
     tushare_token = ask("粘贴你的 TUSHARE_TOKEN", secret=True)
 
@@ -160,6 +164,7 @@ def main():
     section("写入本地 .env")
     update_env_file(
         {
+            "ZHITU_TOKEN": zhitu_token,
             "TUSHARE_TOKEN": tushare_token,
             "LARK_APP_ID": lark_app_id,
             "LARK_SECRET": lark_secret,
@@ -170,6 +175,7 @@ def main():
 
     section("写入 GitHub Secrets")
     secrets = {
+        "ZHITU_TOKEN": zhitu_token,
         "TUSHARE_TOKEN": tushare_token,
         "LARK_APP_ID": lark_app_id,
         "LARK_SECRET": lark_secret,

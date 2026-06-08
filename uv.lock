@@ -883,7 +883,9 @@ dependencies = [
     { name = "pandas" },
     { name = "pysnowball" },
     { name = "python-dotenv" },
+    { name = "requests" },
     { name = "scipy" },
+    { name = "tickflow", extra = ["all"] },
     { name = "tqdm" },
     { name = "tushare" },
 ]
@@ -909,8 +911,10 @@ requires-dist = [
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.0" },
     { name = "pysnowball", specifier = ">=0.1.8" },
     { name = "python-dotenv", specifier = ">=1.0" },
+    { name = "requests", specifier = ">=2.31" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.9" },
     { name = "scipy", specifier = ">=1.11" },
+    { name = "tickflow", extras = ["all"], specifier = ">=0.1.22" },
     { name = "tqdm", specifier = ">=4.66" },
     { name = "tushare", specifier = ">=1.4" },
 ]
@@ -920,6 +924,26 @@ provides-extras = ["dev"]
 dev = [
     { name = "pre-commit", specifier = ">=4.0" },
     { name = "ruff", specifier = ">=0.9" },
+]
+
+[[package]]
+name = "tickflow"
+version = "0.1.22"
+source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple/" }
+dependencies = [
+    { name = "httpx" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/65/62/d37de1747531040ee8846b51fb3d13fdbd72aa08091dae93fa59345b0c72/tickflow-0.1.22.tar.gz", hash = "sha256:b3d1907d2a955f7f983d2264661f3dd5253e547f1e33884400ed5c6acfc2b284", size = 37155, upload-time = "2026-05-24T05:42:33.753Z" }
+wheels = [
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/4c/06/e5cdc3b44eae5dcd46763b1eddc3f4a147d423da1b7c68d5af18ad997478/tickflow-0.1.22-py3-none-any.whl", hash = "sha256:ff19b76f1a012d310e2d5f0a1fab2ca9d8c808d1141a61dd651ca2c3010addcb", size = 42769, upload-time = "2026-05-24T05:42:28.13Z" },
+]
+
+[package.optional-dependencies]
+all = [
+    { name = "pandas" },
+    { name = "tqdm" },
+    { name = "websockets" },
 ]
 
 [[package]]
