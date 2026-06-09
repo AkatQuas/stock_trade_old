@@ -5,12 +5,12 @@ from __future__ import annotations
 import importlib
 from typing import Any
 
-from .paths import get_file_in_pack
+from .paths import get_config_path
 from .registry import load_json_list
 
 
 def load_pool_selectors() -> dict[str, Any]:
-    cfg_path = get_file_in_pack("pool_selector.config.json")
+    cfg_path = get_config_path("pool_selector.config.json")
     entries = load_json_list(cfg_path, "pool_selectors")
     module = importlib.import_module("stock_trade_z.lib.pool_selectors")
     result: dict[str, Any] = {}

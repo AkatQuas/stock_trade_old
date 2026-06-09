@@ -43,18 +43,7 @@ url = "https://pypi.tuna.tsinghua.edu.cn/simple/"
 default = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/stock_trade_z"]
-
-[tool.hatch.build.targets.sdist]
-include = [
-  "src/stock_trade_z/selector.config.json",
-  "src/stock_trade_z/pool_selector.config.json",
-  "src/stock_trade_z/risk.config.json",
-  "src/stock_trade_z/stocklist.total.csv",
-]
-
-[tool.uv]
-package = true
+packages = ["stock_trade_z"]
 
 [dependency-groups]
 dev = ["ruff>=0.9", "pre-commit>=4.0"]
@@ -62,7 +51,7 @@ dev = ["ruff>=0.9", "pre-commit>=4.0"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-src = ["src"]
+src = ["stock_trade_z"]
 extend-exclude = [
   "data",
   "log",
@@ -91,7 +80,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"src/stock_trade_z/try_play.py" = ["F401", "E402"]
+"stock_trade_z/try_play.py" = ["F401", "E402"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["stock_trade_z"]

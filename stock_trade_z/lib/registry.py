@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .logger import get_logger
-from .paths import get_file_in_pack
+from .paths import get_config_path
 
 logger = get_logger("registry")
 
@@ -51,7 +51,7 @@ def load_registry(
     list_key: str,
     module_path: str,
 ) -> dict[str, Any]:
-    cfg_path = get_file_in_pack(config_filename)
+    cfg_path = get_config_path(config_filename)
     entries = load_json_list(cfg_path, list_key)
     result: dict[str, Any] = {}
     for cfg in entries:

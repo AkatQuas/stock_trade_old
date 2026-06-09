@@ -2,6 +2,7 @@ data/
 data_check/
 *.log
 log/
+.ruff_cache/
 
 .env
 stocklist_*.csv

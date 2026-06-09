@@ -43,11 +43,11 @@
 
 ### 环境与依赖
 
-本项目为 **uv 标准布局**（`src/stock_trade_z` 可安装包 + `pyproject.toml` + `uv.lock`）。
+本项目为 **uv 自洽应用布局**（`stock_trade_z/` 应用代码 + `config/` 策略配置 + `pyproject.toml` + `uv.lock`）。仅在本地 `.venv` 可编辑安装以注册 CLI 入口，不作为 PyPI 库发布。
 
 ```bash
 cd /path/to/stock_trade_z
-uv sync          # 创建 .venv 并安装依赖 + 可编辑安装本包
+uv sync               # 创建 .venv、安装依赖并注册 CLI
 uv sync --group dev   # 含 ruff（lint + format）
 ```
 
@@ -164,7 +164,7 @@ uv run stock-detect-risk --data-dir ./data --send-lark
 从 TuShare 获取所有 A 股股票列表，保存到 CSV 文件。建议定期更新，确保数据准确。
 
 ```bash
-python src/stock_trade_z/fetch_stocklist.py
+uv run stock-fetch-list
 ```
 
 ### 2. 下载历史 K 线（qfq，日线）
@@ -173,10 +173,10 @@ python src/stock_trade_z/fetch_stocklist.py
 - **保存策略**：每只股票**全量覆盖写入** `./data/XXXXXX.csv`。
 - **并发抓取**：默认 6 线程；支持封禁冷却（命中「访问频繁/429/403…」将睡眠约 600s 并重试，最多 3 次）。
 - **频控处理**：低积分的 token 可能每分钟可调用的接口次数有限，提前对请求做了睡眠处理
-- **stocklist.good.csv**：经过初步筛选的股票文件。如需全量的数据，请查看 [stocklist.total.csv](./src/stock_trade_z/stocklist.total.csv) 。
+- **stocklist.good.csv**：经过初步筛选的股票文件。如需全量的数据，请查看 [stocklist.total.csv](./stock_trade_z/stocklist.total.csv) 。
 
 ```bash
-python src/stock_trade_z/fetch_kline.py \
+uv run stock-fetch-kline \
   --start 20240101 \
   --end today \
   --stocklist ./stocklist.good.csv \
@@ -226,8 +226,8 @@ uv run stock-select --data-dir ./data --date 2025-09-10
 对指定股票代码进行检查，查看是否命中某一战法。
 
 ```bash
-python src/stock_trade_z/check_code.py \
-  --out ./data \
+uv run stock-check \
+  --data-dir ./data \
   --symbol 002594
 ```
 
@@ -243,7 +243,7 @@ python src/stock_trade_z/check_code.py \
 将新的股票代码添加到 `stocklist.good.csv` 文件中。
 
 ```bash
-python src/stock_trade_z/update_to_goodlist.py \
+uv run python stock_trade_z/update_to_goodlist.py \
   --stocklist ./stocklist.good.csv
 ```
 
@@ -484,46 +484,40 @@ python src/stock_trade_z/update_to_goodlist.py \
 │  ├── launch.json                    # 调试配置
 │  └── settings.json                  # 编辑器设置
 │
-├── src/stock_trade_z/                # 主程序目录
+├── config/                           # 策略与风控配置（与代码分离）
+│  ├── selector.config.json           # 选股策略（selectors + quant_selectors）
+│  ├── pool_selector.config.json      # 股池选股策略
+│  └── risk.config.json               # 风险检测策略
+│
+├── stock_trade_z/                    # 应用代码（CLI 入口 + 内部模块）
 │  ├── fetch_stocklist.py             # 获取所有股票列表
 │  ├── fetch_kline.py                 # 下载历史 K 线数据（前复权）
 │  ├── select_stock.py                # 批量选股主入口
 │  ├── check_code.py                  # 检查单只股票是否命中战法
-│  ├── update_to_goodlist.py             # 添加股票到优选列表
+│  ├── update_to_goodlist.py          # 添加股票到优选列表
 │  ├── sort_csv.py                    # 排序股票列表 CSV 文件
 │  ├── try_play.py                    # 测试脚本
 │  ├── add_xueqiu_urls.py             # 添加雪球链接
-│  │
-│  ├── selector.config.json           # 选股策略（selectors + quant_selectors）
-│  ├── risk.config.json               # 风险检测策略
 │  ├── stocklist.total.csv            # 全量股票池（5000+ 只）
-│  │
-│  └── lib/                           # 内部工具库
-│     ├── __init__.py
+│  └── lib/                           # 内部工具模块
 │     ├── ts_pro_api.py               # Tushare API 封装
 │     ├── selector.py                 # Z 哥战法选择器
 │     ├── quant_selectors.py          # 主流量化选股策略
 │     ├── risk_selectors.py           # 风险检测选择器
 │     ├── registry.py                 # JSON 配置加载公共逻辑
 │     ├── fetch_data.py               # 数据抓取工具
-│     ├── load_data.py                # 数据加载工具
 │     ├── load_selector.py            # 选择器加载工具
 │     ├── load_stocklist.py           # 股票列表加载工具
 │     ├── logger.py                   # 日志工具
 │     ├── paths.py                    # 路径管理
-│     ├── time.py                     # 时间处理工具
-│     ├── utils.py                    # 通用工具函数
-│     ├── constant.py                 # 常量定义
 │     ├── lark_doc.py                 # 飞书云文档创建与 Markdown 写入
 │     ├── lark_notify.py              # 文档报告 + 机器人链接通知
-│     ├── lark_report.py              # 选股/风控 Markdown 报告
-│     ├── send_lark_message.py        # 飞书机器人消息
-│     └── xueqiu.py                   # 雪球相关工具
+│     └── ...
 │
 ├── data/                             # K 线行情 CSV 输出目录
 ├── stocklist.good.csv                # 优选股票池（经过初步筛选）
 ├── .env.example                      # 环境变量示例（Tushare + Lark）
-├── pyproject.toml                    # 项目与 uv 依赖
+├── pyproject.toml                    # 项目依赖与 CLI 入口
 ├── uv.lock                           # 锁定依赖版本
 └── log/                              # 运行日志
 ```
