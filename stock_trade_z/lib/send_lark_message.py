@@ -29,7 +29,7 @@ def get_client() -> lark.Client:
             lark.Client.builder()
             .app_id(os.getenv("LARK_APP_ID"))
             .app_secret(os.getenv("LARK_SECRET"))
-            .log_level(lark.LogLevel.DEBUG)
+            .log_level(lark.LogLevel.INFO)
             .build()
         )
     return _client

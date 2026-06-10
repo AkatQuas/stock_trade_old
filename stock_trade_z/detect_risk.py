@@ -72,8 +72,8 @@ def main():
         logger.info("No risky symbols detected by selectors.")
 
     if args.send_lark:
-        title = f"风险检测 {trade_date.date()}"
-        markdown = build_risk_report_md(trade_date, aggregated, stocklist)
+        title = f"{trade_date.date()}[{trade_date.day_name()}]风险检测"
+        markdown = build_risk_report_md(aggregated, stocklist)
         summary = f"⚠️ 风险检测 — {trade_date.date()} {trade_date.day_name()}"
         if send_report_as_doc(title=title, markdown=markdown, summary=summary):
             logger.info("✅ 已发送风险检测报告文档链接到 Lark")

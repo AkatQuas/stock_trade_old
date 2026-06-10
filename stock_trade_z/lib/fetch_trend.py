@@ -32,6 +32,25 @@ def _normalize_trade_date(trade_date: str) -> str:
     return trade_date
 
 
+def _parse_yes_flag(value) -> int:
+    """Parse 是/否 or numeric flags to 0/1."""
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return 0
+    if isinstance(value, (int, float)) and not pd.isna(value):
+        return 1 if int(value) != 0 else 0
+    text = str(value).strip()
+    if not text:
+        return 0
+    if text in ("是", "yes", "Y", "y", "true", "True", "TRUE"):
+        return 1
+    if text in ("否", "no", "N", "n", "false", "False", "FALSE"):
+        return 0
+    try:
+        return 1 if int(float(text)) != 0 else 0
+    except ValueError:
+        return 0
+
+
 def _parse_tj(tj: str) -> tuple[int | None, int | None]:
     if not tj or not isinstance(tj, str):
         return None, None
@@ -57,6 +76,9 @@ def _normalize_pool_df(df: pd.DataFrame) -> pd.DataFrame:
         parsed = out["tj"].apply(_parse_tj)
         out["tj_days"] = parsed.apply(lambda x: x[0])
         out["tj_boards"] = parsed.apply(lambda x: x[1])
+
+    if "nh" in out.columns:
+        out["nh"] = out["nh"].apply(_parse_yes_flag)
 
     return out
 

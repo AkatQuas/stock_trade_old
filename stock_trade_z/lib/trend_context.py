@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from .fetch_trend import POOL_NAMES, _normalize_trade_date
+from .fetch_trend import POOL_NAMES, _normalize_pool_df, _normalize_trade_date
 
 
 @dataclass
@@ -76,7 +76,7 @@ def load_trend_context(trend_dir: Path, trade_date: str | None = None) -> TrendC
     for name in POOL_NAMES:
         path = date_dir / f"{name}.csv"
         if path.exists():
-            pools[name] = pd.read_csv(path)
+            pools[name] = _normalize_pool_df(pd.read_csv(path))
         else:
             pools[name] = pd.DataFrame()
 

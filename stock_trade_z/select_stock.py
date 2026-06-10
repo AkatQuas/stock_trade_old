@@ -7,7 +7,7 @@ from pathlib import Path
 from stock_trade_z.lib.data_utils import load_data_folder
 from stock_trade_z.lib.lark_notify import send_report_as_doc
 from stock_trade_z.lib.lark_report import build_select_report_md
-from stock_trade_z.lib.llm_analyze import analyze_picks, format_llm_lark_section
+from stock_trade_z.lib.llm_analyze import analyze_picks
 from stock_trade_z.lib.llm_context import build_pick_records
 from stock_trade_z.lib.load_selector import load_selectors
 from stock_trade_z.lib.load_stocklist import load_total_stocklist
@@ -89,12 +89,11 @@ def main():
             data=data,
             max_stocks=args.llm_max,
         )
-        analysis = analyze_picks(records, trade_date, track="normal")
-        llm_section = format_llm_lark_section(analysis)
+        llm_section = analyze_picks(records, trade_date, track="normal")
 
     if args.send_lark:
-        title = f"选股结果 {trade_date.date()}"
-        markdown = build_select_report_md(trade_date, all_results, llm_section)
+        title = f"{trade_date.date()}[{trade_date.day_name()}]选股结果"
+        markdown = build_select_report_md(all_results, llm_section)
         summary = f"📈 选股结果 — {trade_date.date()} {trade_date.day_name()}"
         if send_report_as_doc(title=title, markdown=markdown, summary=summary):
             logger.info("✅ 已发送选股报告文档链接到 Lark")

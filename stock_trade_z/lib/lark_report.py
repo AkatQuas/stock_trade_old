@@ -4,14 +4,10 @@ from __future__ import annotations
 
 
 def build_select_report_md(
-    trade_date,
     results: list[dict],
     llm_section: str | None = None,
 ) -> str:
-    lines = [
-        f"# 选股结果 — {trade_date.date()} {trade_date.day_name()}",
-        "",
-    ]
+    lines = []
     if not results:
         lines.append("本轮无选股结果。")
     else:
@@ -29,14 +25,10 @@ def build_select_report_md(
 
 
 def build_pool_select_report_md(
-    trade_date,
     results: list[dict],
     llm_section: str | None = None,
 ) -> str:
-    lines = [
-        f"# 强势股/涨停选股 — {trade_date.date()} {trade_date.day_name()}",
-        "",
-    ]
+    lines = []
     if not results:
         lines.append("本轮无股池选股结果。")
     else:
@@ -56,14 +48,10 @@ def build_pool_select_report_md(
 
 
 def build_risk_report_md(
-    trade_date,
     aggregated: dict[str, list[str]],
     stocklist: list,
 ) -> str:
-    lines = [
-        f"# 风险检测 — {trade_date.date()} {trade_date.day_name()}",
-        "",
-    ]
+    lines = []
     if not aggregated:
         lines.append("未检测到风险股票。")
         return "\n".join(lines)

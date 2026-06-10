@@ -6,6 +6,8 @@ from datetime import time
 
 import pandas as pd
 
+from .fetch_trend import _parse_yes_flag
+
 
 def _parse_hms(value) -> time | None:
     if value is None or (isinstance(value, float) and pd.isna(value)):
@@ -141,7 +143,7 @@ class NewHighMomentumSelector:
         picks: list[str] = []
         for _, row in pool_df.iterrows():
             sym = str(row["symbol"]).zfill(6)
-            nh = int(row.get("nh", 0) or 0)
+            nh = _parse_yes_flag(row.get("nh", 0))
             zs = float(row.get("zs", 0) or 0)
             lb = float(row.get("lb", 0) or 0)
             if nh != 1 or zs < self.min_zs or lb < self.min_lb:
