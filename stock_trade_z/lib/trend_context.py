@@ -59,6 +59,16 @@ def _date_dir_name(trade_date: str) -> str:
     return pd.to_datetime(_normalize_trade_date(trade_date)).strftime("%Y-%m-%d")
 
 
+def _read_pool_csv(path: Path) -> pd.DataFrame:
+    """Read a pool snapshot CSV; empty files are treated as an empty pool."""
+    if path.stat().st_size == 0:
+        return pd.DataFrame()
+    try:
+        return _normalize_pool_df(pd.read_csv(path))
+    except pd.errors.EmptyDataError:
+        return pd.DataFrame()
+
+
 def load_trend_context(trend_dir: Path, trade_date: str | None = None) -> TrendContext:
     if trade_date is None:
         subdirs = sorted([p for p in trend_dir.iterdir() if p.is_dir()], reverse=True)
@@ -76,7 +86,7 @@ def load_trend_context(trend_dir: Path, trade_date: str | None = None) -> TrendC
     for name in POOL_NAMES:
         path = date_dir / f"{name}.csv"
         if path.exists():
-            pools[name] = _normalize_pool_df(pd.read_csv(path))
+            pools[name] = _read_pool_csv(path)
         else:
             pools[name] = pd.DataFrame()
 

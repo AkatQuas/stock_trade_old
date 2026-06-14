@@ -1,4 +1,5 @@
 data/
+data-pool/
 data_check/
 *.log
 log/
@@ -6,5 +7,6 @@ log/
 
 .env
 stocklist_*.csv
+trend/
 
 .claude/*.local.json

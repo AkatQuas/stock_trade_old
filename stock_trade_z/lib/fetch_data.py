@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+import re
 import time
 from datetime import datetime
 
@@ -18,6 +19,8 @@ from .utils import looks_like_ip_ban, random_sleep_50_to_150ms, sleep_progress
 BATCH_SIZE = 10
 BATCH_GAP_SECONDS = 65
 MAX_RETRIES = 3
+# Liquid A-share used to probe whether the market traded on a given day.
+_TRADE_DATE_BENCHMARK = "600000"
 
 _tickflow: TickFlow | None = None
 
@@ -32,7 +35,20 @@ def get_tickflow_client() -> TickFlow:
 def _normalize_date(date: str) -> str:
     if str(date).lower() == "today":
         return get_today_date()
-    return str(date)
+    text = str(date).strip()
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
+        return text.replace("-", "")
+    return text
+
+
+def is_trade_date(date: str | None = None, *, benchmark: str = _TRADE_DATE_BENCHMARK) -> bool:
+    """Return True when TickFlow has a daily bar for `date` (A-share trading day)."""
+    target = _normalize_date(date or "today")
+    df = _get_kline_tickflow(benchmark, target, target)
+    if df is None or df.empty:
+        return False
+    target_day = pd.to_datetime(target, format="%Y%m%d").normalize()
+    return bool((df["date"].dt.normalize() == target_day).any())
 
 
 def _date_to_ms(date: str, *, end_of_day: bool = False) -> int:

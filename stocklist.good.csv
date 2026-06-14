@@ -22,6 +22,7 @@ ts_code,symbol,name,area,industry,xueqiu_url
 000768.SZ,000768,中航西飞,陕西,航空,https://xueqiu.com/S/SZ000768
 000776.SZ,000776,广发证券,广东,证券,https://xueqiu.com/S/SZ000776
 000807.SZ,000807,云铝股份,云南,铝,https://xueqiu.com/S/SZ000807
+000811.SZ,000811,冰轮环境,山东,工程机械,https://xueqiu.com/S/SZ000811
 000830.SZ,000830,鲁西化工,山东,化工原料,https://xueqiu.com/S/SZ000830
 000831.SZ,000831,中国稀土,江西,小金属,https://xueqiu.com/S/SZ000831
 000858.SZ,000858,五粮液,四川,白酒,https://xueqiu.com/S/SZ000858
@@ -60,7 +61,6 @@ ts_code,symbol,name,area,industry,xueqiu_url
 002181.SZ,002181,粤传媒,广东,出版业,https://xueqiu.com/S/SZ002181
 002185.SZ,002185,华天科技,甘肃,半导体,https://xueqiu.com/S/SZ002185
 002195.SZ,002195,岩山科技,上海,软件服务,https://xueqiu.com/S/SZ002195
-002196.SZ,002196,方正电机,浙江,纺织机械,https://xueqiu.com/S/SZ002196
 002202.SZ,002202,金风科技,新疆,电气设备,https://xueqiu.com/S/SZ002202
 002203.SZ,002203,海亮股份,浙江,铜,https://xueqiu.com/S/SZ002203
 002223.SZ,002223,鱼跃医疗,江苏,医疗保健,https://xueqiu.com/S/SZ002223
@@ -96,6 +96,7 @@ ts_code,symbol,name,area,industry,xueqiu_url
 002716.SZ,002716,湖南白银,湖南,小金属,https://xueqiu.com/S/SZ002716
 002735.SZ,002735,王子新材,深圳,塑料,https://xueqiu.com/S/SZ002735
 002739.SZ,002739,万达电影,北京,影视音像,https://xueqiu.com/S/SZ002739
+002747.SZ,002747,埃斯顿,江苏,机械基件,https://xueqiu.com/S/SZ002747
 002759.SZ,002759,天际股份,广东,电气设备,https://xueqiu.com/S/SZ002759
 002812.SZ,002812,恩捷股份,云南,电气设备,https://xueqiu.com/S/SZ002812
 002821.SZ,002821,凯莱英,天津,生物制药,https://xueqiu.com/S/SZ002821
@@ -103,9 +104,9 @@ ts_code,symbol,name,area,industry,xueqiu_url
 002847.SZ,002847,盐津铺子,湖南,食品,https://xueqiu.com/S/SZ002847
 002851.SZ,002851,麦格米特,深圳,电气设备,https://xueqiu.com/S/SZ002851
 002865.SZ,002865,钧达股份,海南,电气设备,https://xueqiu.com/S/SZ002865
+002896.SZ,002896,中大力德,浙江,机械基件,https://xueqiu.com/S/SZ002896
 002919.SZ,002919,名臣健康,广东,互联网,https://xueqiu.com/S/SZ002919
 002920.SZ,002920,德赛西威,广东,汽车配件,https://xueqiu.com/S/SZ002920
-002931.SZ,002931,锋龙股份,浙江,机械基件,https://xueqiu.com/S/SZ002931
 002961.SZ,002961,瑞达期货,福建,多元金融,https://xueqiu.com/S/SZ002961
 002965.SZ,002965,祥鑫科技,广东,汽车配件,https://xueqiu.com/S/SZ002965
 003009.SZ,003009,中天火箭,陕西,航空,https://xueqiu.com/S/SZ003009
@@ -142,10 +143,10 @@ ts_code,symbol,name,area,industry,xueqiu_url
 300494.SZ,300494,盛天网络,湖北,互联网,https://xueqiu.com/S/SZ300494
 300499.SZ,300499,高澜股份,广东,专用机械,https://xueqiu.com/S/SZ300499
 300502.SZ,300502,新易盛,四川,通信设备,https://xueqiu.com/S/SZ300502
-300503.SZ,300503,昊志机电,广东,机械基件,https://xueqiu.com/S/SZ300503
 300529.SZ,300529,健帆生物,广东,医疗保健,https://xueqiu.com/S/SZ300529
 300580.SZ,300580,贝斯特,江苏,汽车配件,https://xueqiu.com/S/SZ300580
 300604.SZ,300604,长川科技,浙江,半导体,https://xueqiu.com/S/SZ300604
+300607.SZ,300607,拓斯达,广东,专用机械,https://xueqiu.com/S/SZ300607
 300618.SZ,300618,寒锐钴业,江苏,小金属,https://xueqiu.com/S/SZ300618
 300627.SZ,300627,华测导航,上海,通信设备,https://xueqiu.com/S/SZ300627
 300680.SZ,300680,隆盛科技,江苏,汽车配件,https://xueqiu.com/S/SZ300680
@@ -260,7 +261,6 @@ ts_code,symbol,name,area,industry,xueqiu_url
 603605.SH,603605,珀莱雅,浙江,日用化工,https://xueqiu.com/S/SH603605
 603606.SH,603606,东方电缆,浙江,电气设备,https://xueqiu.com/S/SH603606
 603650.SH,603650,彤程新材,上海,化工原料,https://xueqiu.com/S/SH603650
-603667.SH,603667,五洲新春,浙江,机械基件,https://xueqiu.com/S/SH603667
 603688.SH,603688,石英股份,江苏,矿物制品,https://xueqiu.com/S/SH603688
 603716.SH,603716,塞力医疗,湖北,医药商业,https://xueqiu.com/S/SH603716
 603778.SH,603778,国晟科技,北京,电气设备,https://xueqiu.com/S/SH603778
@@ -275,4 +275,5 @@ ts_code,symbol,name,area,industry,xueqiu_url
 605136.SH,605136,丽人丽妆,上海,其他商业,https://xueqiu.com/S/SH605136
 605358.SH,605358,立昂微,浙江,半导体,https://xueqiu.com/S/SH605358
 605499.SH,605499,东鹏饮料,深圳,软饮料,https://xueqiu.com/S/SH605499
+688017.SH,688017,绿的谐波,江苏,机械基件,https://xueqiu.com/S/SH688017
 688270.SH,688270,臻镭科技,浙江,半导体,https://xueqiu.com/S/SH688270
