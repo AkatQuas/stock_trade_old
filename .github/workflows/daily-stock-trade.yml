@@ -17,6 +17,7 @@ jobs:
       TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
       ZHITU_TOKEN: ${{ secrets.ZHITU_TOKEN }}
       DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       LARK_APP_ID: ${{secrets.LARK_APP_ID}}
       LARK_SECRET: ${{secrets.LARK_SECRET}}
       LARK_FOLDER_TOKEN: ${{ secrets.LARK_FOLDER_TOKEN }}
@@ -50,6 +51,10 @@ jobs:
       - name: Select potential stock (normal)
         run: |
           uv run stock-select --data-dir ./data --send-lark --llm-analyze
+
+      # - name: Quant preselect + Gemini review
+      #   run: |
+      #     uv run stock-quant-pipeline --data-dir ./data --send-lark
 
       - name: Detect risk stock
         run: |

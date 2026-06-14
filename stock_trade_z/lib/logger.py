@@ -9,7 +9,7 @@ _logger_cache = {}
 
 
 def get_logger(
-    logger_name: Literal["fetch", "select", "check", "noop", "risk", "registry"],
+    logger_name: Literal["fetch", "select", "check", "noop", "risk", "registry", "quant"],
     log_level: int = logging.INFO,
     log_format: str | None = None,
     file_mode: str = "a",  # Append mode (use "w" to overwrite logs each time)

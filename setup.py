@@ -150,6 +150,10 @@ def main():
     print(dim("  申请 API Key：https://platform.deepseek.com/api_keys"))
     api_key = ask("粘贴你的 DEEPSEEK_API_KEY", secret=True)
 
+    section("Gemini API（量化看图复评）")
+    print(dim("  申请 API Key：https://aistudio.google.com/apikey"))
+    gemini_api_key = ask("粘贴你的 GEMINI_API_KEY", secret=True)
+
     section("智图 API（股池 qsgc/ztgc）")
     print(dim("  申请 Token：https://www.zhituapi.com/get-free-cert.html"))
     zhitu_token = ask("粘贴你的 ZHITU_TOKEN", secret=True)
@@ -174,6 +178,7 @@ def main():
     update_env_file(
         {
             "DEEPSEEK_API_KEY": api_key,
+            "GEMINI_API_KEY": gemini_api_key,
             "ZHITU_TOKEN": zhitu_token,
             "TUSHARE_TOKEN": tushare_token,
             "LARK_APP_ID": lark_app_id,
@@ -187,6 +192,7 @@ def main():
     section("写入 GitHub Secrets")
     secrets = {
         "DEEPSEEK_API_KEY": api_key,
+        "GEMINI_API_KEY": gemini_api_key,
         "ZHITU_TOKEN": zhitu_token,
         "TUSHARE_TOKEN": tushare_token,
         "LARK_APP_ID": lark_app_id,
