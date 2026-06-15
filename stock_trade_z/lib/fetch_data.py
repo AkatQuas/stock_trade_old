@@ -5,7 +5,6 @@ from __future__ import annotations
 import random
 import re
 import time
-from datetime import datetime
 
 import pandas as pd
 from tickflow import TickFlow
@@ -13,7 +12,7 @@ from tickflow import TickFlow
 from .constant import COLUMNS, RateLimitError
 from .load_stocklist import StockCodeDict, code2ts_code
 from .logger import get_logger
-from .time import get_today_date, validate
+from .time import date_to_ms, get_today_date, validate
 from .utils import looks_like_ip_ban, random_sleep_50_to_150ms, sleep_progress
 
 BATCH_SIZE = 10
@@ -49,14 +48,6 @@ def is_trade_date(date: str | None = None, *, benchmark: str = _TRADE_DATE_BENCH
         return False
     target_day = pd.to_datetime(target, format="%Y%m%d").normalize()
     return bool((df["date"].dt.normalize() == target_day).any())
-
-
-def _date_to_ms(date: str, *, end_of_day: bool = False) -> int:
-    normalized = _normalize_date(date)
-    dt = datetime.strptime(normalized, "%Y%m%d")
-    if end_of_day:
-        dt = dt.replace(hour=23, minute=59, second=59)
-    return int(dt.timestamp() * 1000)
 
 
 def _convert_tickflow_df(df: pd.DataFrame, start: str, end: str) -> pd.DataFrame:
@@ -97,8 +88,8 @@ def _get_kline_tickflow(code: str, start: str, end: str) -> pd.DataFrame:
         df = tf.klines.get(
             ts_code,
             period="1d",
-            start_time=_date_to_ms(start),
-            end_time=_date_to_ms(end, end_of_day=True),
+            start_time=date_to_ms(_normalize_date(start)),
+            end_time=date_to_ms(_normalize_date(end), end_of_day=True),
             adjust="forward",
             as_dataframe=True,
         )
@@ -142,8 +133,8 @@ def fetch_batch_data(
             batch_data = tf.klines.batch(
                 chunk,
                 period="1d",
-                start_time=_date_to_ms(start),
-                end_time=_date_to_ms(end, end_of_day=True),
+                start_time=date_to_ms(_normalize_date(start)),
+                end_time=date_to_ms(_normalize_date(end), end_of_day=True),
                 adjust="forward",
                 as_dataframe=True,
                 show_progress=False,
