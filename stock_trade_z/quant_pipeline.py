@@ -5,7 +5,7 @@ quant_pipeline.py
 
   步骤 1  量化初选（B1 / 砖型图）
   步骤 2  导出候选股 K 线图
-  步骤 3  Gemini 图表分析评分
+  步骤 3  VL 视觉模型图表复评
   步骤 4  打印推荐 + 可选飞书推送
 """
 
@@ -25,8 +25,7 @@ from stock_trade_z.quant.preselect.pipeline_io import save_candidates, today_iso
 from stock_trade_z.quant.preselect.preselect import resolve_preselect_output_dir, run_preselect
 from stock_trade_z.quant.preselect.schemas import CandidateRun
 from stock_trade_z.quant.report import build_quant_report_md
-from stock_trade_z.quant.review.gemini_review import load_config as load_review_config
-from stock_trade_z.quant.review.gemini_review import run_review
+from stock_trade_z.quant.review.vision_review import VisionReview
 
 logger = get_logger("quant")
 
@@ -88,15 +87,21 @@ def _run_preselect_step(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="量化初选 + K线图 + Gemini 全流程")
+    parser = argparse.ArgumentParser(description="量化初选 + K线图 + VL 视觉复评全流程")
     parser.add_argument("--data-dir", type=Path, default=Path("./data"), help="K 线 CSV 目录")
     parser.add_argument("--config", type=Path, default=None, help="rules_preselect.yaml 路径")
+    parser.add_argument(
+        "--review-config",
+        type=Path,
+        default=None,
+        help="VL 复评配置路径（默认 config/vision_review.yaml）",
+    )
     parser.add_argument("--date", default=None, help="选股基准日期 YYYY-MM-DD")
     parser.add_argument(
         "--start-from", type=int, default=1, metavar="N", help="从第 N 步开始 (1~3)"
     )
     parser.add_argument("--skip-charts", action="store_true", help="跳过 K 线图导出")
-    parser.add_argument("--skip-review", action="store_true", help="跳过 Gemini 复评")
+    parser.add_argument("--skip-review", action="store_true", help="跳过 VL 视觉复评")
     parser.add_argument("--send-lark", action="store_true", help="发送飞书报告")
     args = parser.parse_args()
 
@@ -104,6 +109,8 @@ def main() -> None:
     if not data_dir.exists():
         logger.error("数据目录 %s 不存在", data_dir)
         sys.exit(1)
+
+    vision_review = VisionReview(config_path=args.review_config)
 
     start = args.start_from
     pick_date_str = args.date or ""
@@ -136,13 +143,15 @@ def main() -> None:
 
     if start <= 3 and not args.skip_review:
         if candidate_dicts:
-            logger.info("===== 步骤 3/3 Gemini 图表分析 =====")
-            suggestion = run_review()
+            logger.info(
+                "===== 步骤 3/3 VL 视觉复评 (provider=%s) =====",
+                vision_review.provider,
+            )
+            suggestion = vision_review.run()
         else:
-            logger.info("无候选股票，跳过 Gemini 复评")
+            logger.info("无候选股票，跳过 VL 视觉复评")
 
-    review_cfg = load_review_config()
-    suggestion_file = Path(review_cfg["output_dir"]) / pick_date_str / "suggestion.json"
+    suggestion_file = vision_review.suggestion_file(pick_date_str)
     if suggestion is None and suggestion_file.exists():
         suggestion = json.loads(suggestion_file.read_text(encoding="utf-8"))
 
@@ -150,18 +159,19 @@ def main() -> None:
     if suggestion:
         _print_recommendations(suggestion_file)
     elif candidate_dicts:
-        logger.info("无 Gemini 评分汇总（可能已 --skip-review）")
+        logger.info("无 VL 评分汇总（可能已 --skip-review）")
     else:
         logger.info("本轮无候选股票")
 
     if args.send_lark:
         stocklist = load_total_stocklist()
-        title = f"{pick_date_str} 量化初选+Gemini推荐"
+        title = f"{pick_date_str} 量化初选+VL推荐"
         markdown = build_quant_report_md(
             candidates=candidate_dicts,
             pick_date=pick_date_str,
             stocklist=stocklist,
             suggestion=suggestion,
+            review_provider=vision_review.provider,
         )
         summary = f"📊 量化选股 — {pick_date_str}"
         if send_report_as_doc(title=title, markdown=markdown, summary=summary):

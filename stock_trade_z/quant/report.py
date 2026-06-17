@@ -10,10 +10,14 @@ def build_quant_report_md(
     pick_date: str,
     stocklist: list[dict[str, Any]],
     suggestion: dict[str, Any] | None = None,
+    review_provider: str = "vl",
 ) -> str:
     lines: list[str] = []
-    lines.append(f"# 量化初选 + Gemini 推荐 ({pick_date})")
+    lines.append(f"# 量化初选 + VL 视觉复评 ({pick_date})")
     lines.append("")
+    if review_provider:
+        lines.append(f"复评模型: {review_provider}")
+        lines.append("")
 
     if not candidates:
         lines.append("本轮量化初选无候选股票。")
@@ -34,13 +38,13 @@ def build_quant_report_md(
 
     if suggestion is None:
         lines.append("")
-        lines.append("## Gemini 推荐")
+        lines.append("## VL 视觉复评推荐")
         lines.append("")
-        lines.append("未完成 Gemini 复评或无评分结果。")
+        lines.append("未完成 VL 视觉复评或无评分结果。")
         return "\n".join(lines).strip()
 
     lines.append("")
-    lines.append("## Gemini 推荐")
+    lines.append("## VL 视觉复评推荐")
     lines.append("")
     min_score = suggestion.get("min_score_threshold", 0)
     total = suggestion.get("total_reviewed", 0)

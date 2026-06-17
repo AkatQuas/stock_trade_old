@@ -1,4 +1,4 @@
-"""Base architecture for Gemini chart review."""
+"""Base architecture for VL (vision-language) chart review."""
 
 from __future__ import annotations
 
@@ -38,15 +38,51 @@ class BaseReviewer:
         return day_chart
 
     @staticmethod
-    def extract_json(text: str) -> dict:
-        code_block = re.search(r"```(?:json)?\s*([\s\S]*?)```", text)
-        if code_block:
-            text = code_block.group(1)
-        start = text.find("{")
-        end = text.rfind("}") + 1
-        if start == -1 or end == 0:
-            raise ValueError(f"未能在模型输出中找到 JSON 对象:\n{text}")
-        return json.loads(text[start:end])
+    def build_review_user_text(code: str) -> str:
+        return (
+            f"股票代码：{code}\n\n"
+            "以下是该股票的 **日线图**。请按系统提示完成分析，"
+            "最后仅输出四行判定结果（【判定】【总分】【信号】【点评】），不要 JSON。"
+        )
+
+    @staticmethod
+    def parse_review_text(text: str) -> dict:
+        """从固定标签文本提取判定结果（非 JSON）。"""
+        raw = text.strip()
+        if not raw:
+            raise ValueError("模型返回空响应")
+
+        verdict_m = re.search(r"【判定】\s*(PASS|WATCH|FAIL)\b", raw)
+        score_m = re.search(r"【总分】\s*([\d.]+)", raw)
+        signal_m = re.search(
+            r"【信号】\s*(trend_start|rebound|distribution_risk)\b",
+            raw,
+        )
+        comment_m = re.search(r"【点评】\s*(.+)", raw, re.DOTALL)
+
+        missing = [
+            name
+            for name, match in (
+                ("判定", verdict_m),
+                ("总分", score_m),
+                ("信号", signal_m),
+                ("点评", comment_m),
+            )
+            if match is None
+        ]
+        if missing:
+            raise ValueError(f"未能从模型输出中解析标签: {', '.join(missing)}\n{raw}")
+
+        comment = comment_m.group(1).strip()
+        comment = re.sub(r"\n{3,}", "\n\n", comment)
+
+        return {
+            "verdict": verdict_m.group(1),
+            "total_score": float(score_m.group(1)),
+            "signal_type": signal_m.group(1),
+            "comment": comment,
+            "raw_response": raw,
+        }
 
     def review_stock(self, code: str, day_chart: Path, prompt: str) -> dict:
         raise NotImplementedError("子类必须实现 review_stock 方法")
@@ -86,7 +122,7 @@ class BaseReviewer:
         logger.info("pick_date=%s，候选股票数=%d", pick_date, len(candidates))
 
         if not candidates:
-            logger.info("无候选股票，跳过 Gemini 复评")
+            logger.info("无候选股票，跳过 VL 复评")
             return None
 
         out_dir = self.output_dir / pick_date

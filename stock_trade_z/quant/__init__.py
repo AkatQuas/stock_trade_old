@@ -1,1 +1,1 @@
-"""Quantitative preselect, chart export, and Gemini review pipeline."""
+"""Quantitative preselect, chart export, and VL vision review pipeline."""

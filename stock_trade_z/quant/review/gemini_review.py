@@ -8,47 +8,13 @@ import sys
 from pathlib import Path
 from typing import Any
 
-import yaml
 from google import genai
 from google.genai import types
 
 from stock_trade_z.lib.logger import get_logger
-from stock_trade_z.lib.paths import get_config_path, get_project_root
 from stock_trade_z.quant.review.base_reviewer import BaseReviewer
 
 logger = get_logger("quant")
-
-DEFAULT_CONFIG: dict[str, Any] = {
-    "candidates": "data/candidates/candidates_latest.json",
-    "kline_dir": "data/kline",
-    "output_dir": "data/review",
-    "prompt_path": "stock_trade_z/quant/review/prompt.md",
-    "model": "gemini-2.0-flash",
-    "request_delay": 5,
-    "skip_existing": False,
-    "suggest_min_score": 4.0,
-}
-
-
-def _resolve_cfg_path(path_like: str | Path, base_dir: Path | None = None) -> Path:
-    base = base_dir or get_project_root()
-    p = Path(path_like)
-    return p if p.is_absolute() else (base / p)
-
-
-def load_config(config_path: Path | None = None) -> dict[str, Any]:
-    cfg_path = config_path or get_config_path("gemini_review.yaml")
-    if not cfg_path.exists():
-        raise FileNotFoundError(f"找不到配置文件: {cfg_path}")
-
-    raw = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
-    cfg = {**DEFAULT_CONFIG, **raw}
-
-    cfg["candidates"] = _resolve_cfg_path(cfg["candidates"])
-    cfg["kline_dir"] = _resolve_cfg_path(cfg["kline_dir"])
-    cfg["output_dir"] = _resolve_cfg_path(cfg["output_dir"])
-    cfg["prompt_path"] = _resolve_cfg_path(cfg["prompt_path"])
-    return cfg
 
 
 class GeminiReviewer(BaseReviewer):
@@ -71,11 +37,7 @@ class GeminiReviewer(BaseReviewer):
         return types.Part.from_bytes(data=data, mime_type=mime_type)
 
     def review_stock(self, code: str, day_chart: Path, prompt: str) -> dict:
-        user_text = (
-            f"股票代码：{code}\n\n"
-            "以下是该股票的 **日线图**，请按照系统提示中的框架进行分析，"
-            "并严格按照要求输出 JSON。"
-        )
+        user_text = self.build_review_user_text(code)
 
         parts: list[types.Part] = [
             types.Part.from_text(text="【日线图】"),
@@ -84,36 +46,32 @@ class GeminiReviewer(BaseReviewer):
         ]
 
         response = self.client.models.generate_content(
-            model=self.config.get("model", "gemini-2.0-flash"),
+            model=self.config["model"],
             contents=[types.Content(role="user", parts=parts)],
             config=types.GenerateContentConfig(
                 system_instruction=prompt,
-                temperature=0.2,
+                temperature=self.config["temperature"],
             ),
         )
 
         response_text = response.text
         if response_text is None:
-            raise RuntimeError(f"Gemini 返回空响应，无法解析 JSON（code={code}）")
+            raise RuntimeError(f"Gemini 返回空响应（code={code}）")
 
-        result = self.extract_json(response_text)
+        result = self.parse_review_text(response_text)
         result["code"] = code
         return result
 
 
-def run_review(config_path: Path | None = None) -> dict | None:
-    config = load_config(config_path)
-    reviewer = GeminiReviewer(config)
-    return reviewer.run()
-
-
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Gemini 图表复评")
-    parser.add_argument("--config", default=None, help="gemini_review.yaml 路径")
+    from stock_trade_z.quant.review.vision_review import VisionReview
+
+    parser = argparse.ArgumentParser(description="Gemini VL 图表复评")
+    parser.add_argument("--config", default=None, help="复评 YAML 路径")
     args = parser.parse_args()
 
     cfg_path = Path(args.config) if args.config else None
-    run_review(cfg_path)
+    VisionReview(cfg_path, provider="gemini" if cfg_path is None else None).run()
 
 
 if __name__ == "__main__":

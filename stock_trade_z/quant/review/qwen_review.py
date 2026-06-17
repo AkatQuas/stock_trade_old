@@ -9,55 +9,14 @@ import sys
 from pathlib import Path
 from typing import Any
 
-import yaml
 from dotenv import load_dotenv
 from openai import OpenAI
 
 from stock_trade_z.lib.logger import get_logger
-from stock_trade_z.lib.paths import get_config_path, get_project_root
+from stock_trade_z.lib.paths import get_project_root
 from stock_trade_z.quant.review.base_reviewer import BaseReviewer
 
 logger = get_logger("quant")
-
-DEFAULT_CONFIG: dict[str, Any] = {
-    "candidates": "data/candidates/candidates_latest.json",
-    "kline_dir": "data/kline",
-    "output_dir": "data/review",
-    "prompt_path": "stock_trade_z/quant/review/prompt.md",
-    "model": "qwen3.7-plus",
-    "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-    "request_delay": 5,
-    "skip_existing": False,
-    "suggest_min_score": 4.0,
-    "enable_thinking": True,
-    "thinking_budget": 81920,
-    # Qwen3.7 思考模式默认 temperature=0.6（见 qwen.md）
-    "temperature": 0.6,
-    "response_format": "json_object",
-    "max_completion_tokens": None,
-    "vl_high_resolution_images": True,
-}
-
-
-def _resolve_cfg_path(path_like: str | Path, base_dir: Path | None = None) -> Path:
-    base = base_dir or get_project_root()
-    p = Path(path_like)
-    return p if p.is_absolute() else (base / p)
-
-
-def load_config(config_path: Path | None = None) -> dict[str, Any]:
-    cfg_path = config_path or get_config_path("qwen_review.yaml")
-    if not cfg_path.exists():
-        raise FileNotFoundError(f"找不到配置文件: {cfg_path}")
-
-    raw = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
-    cfg = {**DEFAULT_CONFIG, **raw}
-
-    cfg["candidates"] = _resolve_cfg_path(cfg["candidates"])
-    cfg["kline_dir"] = _resolve_cfg_path(cfg["kline_dir"])
-    cfg["output_dir"] = _resolve_cfg_path(cfg["output_dir"])
-    cfg["prompt_path"] = _resolve_cfg_path(cfg["prompt_path"])
-    return cfg
 
 
 class QwenReviewer(BaseReviewer):
@@ -73,7 +32,7 @@ class QwenReviewer(BaseReviewer):
 
         self.client = OpenAI(
             api_key=api_key,
-            base_url=config.get("base_url", DEFAULT_CONFIG["base_url"]),
+            base_url=config["base_url"],
         )
 
     @staticmethod
@@ -106,26 +65,25 @@ class QwenReviewer(BaseReviewer):
         return answer_content
 
     def _build_extra_body(self) -> dict[str, Any]:
-        enable_thinking = bool(self.config.get("enable_thinking", True))
+        enable_thinking = bool(self.config["enable_thinking"])
         extra_body: dict[str, Any] = {"enable_thinking": enable_thinking}
         if enable_thinking:
-            extra_body["thinking_budget"] = self.config.get(
-                "thinking_budget", DEFAULT_CONFIG["thinking_budget"]
-            )
-        if self.config.get("vl_high_resolution_images", True):
+            extra_body["thinking_budget"] = self.config["thinking_budget"]
+        if self.config.get("vl_high_resolution_images"):
             extra_body["vl_high_resolution_images"] = True
         return extra_body
 
     def _stream_completion(self, messages: list[dict[str, Any]]) -> str:
         create_kwargs: dict[str, Any] = {
-            "model": self.config.get("model", "qwen3.7-plus"),
+            "model": self.config["model"],
             "messages": messages,
-            "temperature": self.config.get("temperature", DEFAULT_CONFIG["temperature"]),
+            "temperature": self.config["temperature"],
             "stream": True,
             "extra_body": self._build_extra_body(),
         }
         if self.config.get("response_format") == "json_object":
             create_kwargs["response_format"] = {"type": "json_object"}
+
         max_completion_tokens = self.config.get("max_completion_tokens")
         if max_completion_tokens is not None:
             create_kwargs["max_completion_tokens"] = max_completion_tokens
@@ -134,11 +92,7 @@ class QwenReviewer(BaseReviewer):
         return self._collect_stream_answer(completion)
 
     def review_stock(self, code: str, day_chart: Path, prompt: str) -> dict:
-        user_text = (
-            f"股票代码：{code}\n\n"
-            "以下是该股票的 **日线图**，请按照系统提示中的框架进行分析，"
-            "并严格按照要求输出 JSON。"
-        )
+        user_text = self.build_review_user_text(code)
 
         messages = [
             {"role": "system", "content": prompt},
@@ -156,27 +110,20 @@ class QwenReviewer(BaseReviewer):
         ]
 
         response_text = self._stream_completion(messages)
-        if not response_text.strip():
-            raise RuntimeError(f"Qwen 返回空响应，无法解析 JSON（code={code}）")
-
-        result = self.extract_json(response_text)
+        result = self.parse_review_text(response_text)
         result["code"] = code
         return result
 
 
-def run_review(config_path: Path | None = None) -> dict | None:
-    config = load_config(config_path)
-    reviewer = QwenReviewer(config)
-    return reviewer.run()
-
-
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Qwen 图表复评")
-    parser.add_argument("--config", default=None, help="qwen_review.yaml 路径")
+    from stock_trade_z.quant.review.vision_review import VisionReview
+
+    parser = argparse.ArgumentParser(description="Qwen VL 图表复评")
+    parser.add_argument("--config", default=None, help="复评 YAML 路径（默认 vision_review.yaml）")
     args = parser.parse_args()
 
     cfg_path = Path(args.config) if args.config else None
-    run_review(cfg_path)
+    VisionReview(cfg_path, provider="qwen" if cfg_path is None else None).run()
 
 
 if __name__ == "__main__":

@@ -259,25 +259,21 @@ signal_reasoning
 
 ---
 
-# 九、输出格式（必须严格 JSON）
+# 九、输出格式（固定标签，禁止 JSON）
 
-{
-"trend_reasoning": "string",
-"position_reasoning": "string",
-"volume_reasoning": "string",
-"abnormal_move_reasoning": "string",
-"signal_reasoning": "string",
-"scores": {
-"trend_structure": 1,
-"price_position": 1,
-"volume_behavior": 1,
-"previous_abnormal_move": 1
-},
-"total_score": 1.0,
-"signal_type": "trend_start",
-"verdict": "WATCH",
-"comment": "一句中文交易员点评"
-}
+分析完成后，**只输出以下四行**，每行以中文标签开头，不要 JSON、不要代码块、不要额外说明：
+
+【判定】PASS 或 WATCH 或 FAIL
+【总分】数字（如 4.2）
+【信号】trend_start 或 rebound 或 distribution_risk
+【点评】一句中文交易员点评
+
+示例：
+
+【判定】PASS
+【总分】4.2
+【信号】trend_start
+【点评】均线多头刚形成，上涨放量回调缩量，前期有主力建仓异动，上方仍有空间。
 
 ---
 
@@ -285,18 +281,10 @@ signal_reasoning
 
 Charts
 ↓
-Reasoning
+Reasoning（可在脑中完成，不必写出）
 ↓
 Score
 ↓
 Trader Comment
 ↓
-JSON Output
-
-禁止流程：
-
-猜测数据
-↓
-随意打分
-↓
-机器式评论
+四行标签输出
