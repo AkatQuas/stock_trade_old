@@ -1,5 +1,5 @@
 """
-Selector.py — 模块化、向量化、Numba 加速选股框架
+Pipeline selectors — B1 / 砖型图等向量化选股器
 =================================================
 
 设计原则
@@ -13,12 +13,9 @@ Selector.py — 模块化、向量化、Numba 加速选股框架
    - ``passes_df_on_date(df, date)``     单日判断
    - ``vec_picks_from_prepared(df)``     从预计算列批量获取通过日期
 
-3. **Numba 加速**
-   - KDJ 递推、砖型图核心循环、连续绿柱计数均使用 ``@njit`` 加速
-
 Selector 一览
 -------------
-- ``B1Selector``          KDJ 分位 + 知行线 + 周线多头排列
+- ``B1Selector``          KDJ 分位 + 知行线 + 周线多头排列 + 最大量非阴线
 - ``BrickChartSelector``  砖型图形态 + 知行线 + 周线多头排列
 """
 
@@ -348,7 +345,23 @@ class PipelineSelector:
         return self.passes_hist(self._get_hist(df, date))
 
     def select(self, date: pd.Timestamp, data: dict[str, pd.DataFrame]) -> list[str]:
-        return [code for code, df in data.items() if self.passes_df_on_date(df, date)]
+        use_vec = type(self).prepare_df is not PipelineSelector.prepare_df
+        picks: list[str] = []
+        for code, df in data.items():
+            if use_vec:
+                hist = self._get_hist(df, date)
+                if len(hist) < self.min_bars + self.extra_bars_buffer:
+                    continue
+                try:
+                    pf = self.prepare_df(hist)
+                    if self.vec_picks_from_prepared(pf, start=date, end=date):
+                        picks.append(code)
+                    continue
+                except Exception:
+                    pass
+            if self.passes_df_on_date(df, date):
+                picks.append(code)
+        return picks
 
     # ── 向量化批量接口（子类实现 prepare_df） ────────────────────────────────
 
@@ -366,6 +379,13 @@ class PipelineSelector:
         if "_vec_pick" not in df.columns:
             return []
         mask = df["_vec_pick"].astype(bool)
+        if self.date_col in df.columns:
+            dates = pd.to_datetime(df[self.date_col])
+            if start is not None:
+                mask = mask & (dates >= start)
+            if end is not None:
+                mask = mask & (dates <= end)
+            return list(dates[mask])
         if start is not None:
             mask = mask & (df.index >= start)
         if end is not None:

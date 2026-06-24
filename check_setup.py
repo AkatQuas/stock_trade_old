@@ -51,7 +51,6 @@ required = {
 }
 optional = {
     "DEEPSEEK_API_KEY": os.getenv("DEEPSEEK_API_KEY"),
-    "GEMINI_API_KEY": os.getenv("GEMINI_API_KEY"),
 }
 for name, value in required.items():
     check(name, bool(value), "已设置" if value else "未找到")
@@ -88,20 +87,6 @@ if api_key_configured():
         check("DeepSeek API 连接", False, str(e))
 else:
     print("  ⚪  DEEPSEEK_API_KEY 未设置（可选，--llm-analyze 时使用）")
-
-section("Gemini API（量化看图，可选）")
-gemini_key = os.getenv("GEMINI_API_KEY")
-if gemini_key:
-    try:
-        from google import genai
-
-        client = genai.Client(api_key=gemini_key)
-        list(client.models.list())
-        check("Gemini API 连接成功", True)
-    except Exception as e:
-        check("Gemini API 连接", False, str(e))
-else:
-    print("  ⚪  GEMINI_API_KEY 未设置（可选，stock-quant-pipeline 时使用）")
 
 section("Tushare API（股票列表）")
 if os.getenv("TUSHARE_TOKEN"):

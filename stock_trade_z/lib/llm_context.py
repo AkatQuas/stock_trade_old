@@ -94,8 +94,13 @@ def build_pick_records(
             )
             entry["matched_selectors"].append(selector_name)
 
+    ranked = sorted(
+        by_symbol.items(),
+        key=lambda kv: len(kv[1]["matched_selectors"]),
+        reverse=True,
+    )
     records: list[dict[str, Any]] = []
-    for sym, entry in list(by_symbol.items())[:max_stocks]:
+    for sym, entry in ranked[:max_stocks]:
         hist = data.get(sym)
         entry["kline_summary"] = summarize_kline(hist, trade_date) if hist is not None else {}
         if trend_ctx is not None:

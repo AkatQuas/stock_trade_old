@@ -150,13 +150,6 @@
       "problemMatcher": []
     },
     {
-      "label": "Fetch then Select & Detect Risk",
-      "detail": "Fetch K line data, then select stocks and detect risk",
-      "dependsOn": ["Fetch K Line", "Select Stock", "Detect Risk Stock"],
-      "dependsOrder": "sequence",
-      "problemMatcher": []
-    },
-    {
       "label": "Lint (ruff check)",
       "command": "uv",
       "type": "shell",

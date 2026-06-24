@@ -105,13 +105,72 @@
         "j_threshold": 15,
         "lookback_n": 10
       }
-    }
-  ],
-  "quant_selectors": [
+    },
+    {
+      "class": "OscillationGrowthSelector",
+      "alias": "震荡上攻战法",
+      "params": {
+        "oscillation_days": 15,
+        "oscillation_pct": 0.08,
+        "growth_bars": 3,
+        "growth_pct": 0.03,
+        "require_bullish": true,
+        "require_monotonic_close": true,
+        "require_breakout": true,
+        "use_zx_filter": true
+      }
+    },
+    {
+      "class": "B1Selector",
+      "module": "stock_trade_z.lib.pipeline_selectors",
+      "alias": "B1战法",
+      "params": {
+        "j_threshold": 15,
+        "j_q_threshold": 0.1,
+        "zx_m1": 14,
+        "zx_m2": 28,
+        "zx_m3": 57,
+        "zx_m4": 114,
+        "wma_short": 5,
+        "wma_mid": 10,
+        "wma_long": 20
+      }
+    },
+    {
+      "class": "BrickChartSelector",
+      "module": "stock_trade_z.lib.pipeline_selectors",
+      "alias": "砖型图战法",
+      "params": {
+        "n": 8,
+        "m1": 3,
+        "m2": 12,
+        "m3": 12,
+        "t": 8,
+        "shift1": 92,
+        "shift2": 114,
+        "sma_w1": 1,
+        "sma_w2": 1,
+        "sma_w3": 1,
+        "daily_return_threshold": 0.2,
+        "brick_growth_ratio": 0.5,
+        "min_prior_green_bars": 1,
+        "zxdq_ratio": 1.47,
+        "zxdq_span": 10,
+        "require_zxdq_gt_zxdkx": true,
+        "zxdkx_m1": 14,
+        "zxdkx_m2": 28,
+        "zxdkx_m3": 57,
+        "zxdkx_m4": 114,
+        "require_weekly_ma_bull": true,
+        "wma_short": 5,
+        "wma_mid": 10,
+        "wma_long": 20
+      }
+    },
     {
       "class": "MomentumSelector",
+      "module": "stock_trade_z.lib.quant_selectors",
       "alias": "动量因子",
-      "activate": true,
       "params": {
         "roc_window": 20,
         "roc_min_pct": 5.0,
@@ -121,8 +180,8 @@
     },
     {
       "class": "MACDGoldenCrossSelector",
+      "module": "stock_trade_z.lib.quant_selectors",
       "alias": "MACD金叉",
-      "activate": true,
       "params": {
         "lookback_n": 5,
         "require_dif_positive": true,
@@ -131,8 +190,8 @@
     },
     {
       "class": "BollingerMeanReversionSelector",
+      "module": "stock_trade_z.lib.quant_selectors",
       "alias": "布林均值回归",
-      "activate": true,
       "params": {
         "bb_window": 20,
         "bb_std": 2.0,
@@ -143,8 +202,8 @@
     },
     {
       "class": "DonchianBreakoutSelector",
+      "module": "stock_trade_z.lib.quant_selectors",
       "alias": "唐奇安突破",
-      "activate": true,
       "params": {
         "channel_n": 20,
         "vol_lookback": 20,
@@ -154,13 +213,24 @@
     },
     {
       "class": "DualMAGoldenCrossSelector",
+      "module": "stock_trade_z.lib.quant_selectors",
       "alias": "双均线金叉",
-      "activate": true,
       "params": {
         "short_ma": 10,
         "long_ma": 30,
         "lookback_n": 5,
         "min_history": 35
+      }
+    },
+    {
+      "class": "ChartScoreSelector",
+      "module": "stock_trade_z.lib.chart_score",
+      "alias": "K线图形评分",
+      "params": {
+        "min_bars": 60,
+        "lookback": 120,
+        "swing_lookback": 40,
+        "pass_threshold": 3.7
       }
     }
   ]

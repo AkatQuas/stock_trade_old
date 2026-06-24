@@ -2,7 +2,7 @@ name: Daily Stock Trade
 
 on:
   schedule:
-    - cron: '0 7 * * 1-5'
+    - cron: '0 6 * * 1-5'
   workflow_dispatch:
 
 jobs:
@@ -16,7 +16,6 @@ jobs:
       TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
       ZHITU_TOKEN: ${{ secrets.ZHITU_TOKEN }}
       DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-      DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
       LARK_APP_ID: ${{secrets.LARK_APP_ID}}
       LARK_SECRET: ${{secrets.LARK_SECRET}}
       LARK_FOLDER_TOKEN: ${{ secrets.LARK_FOLDER_TOKEN }}
@@ -51,13 +50,9 @@ jobs:
         run: |
           uv run stock-select --data-dir ./data --send-lark --llm-analyze
 
-      - name: Quant preselect + Qwen review
-        run: |
-          uv run stock-quant-pipeline --data-dir ./data --send-lark || echo "quant-review failed"
-
-      - name: Detect risk stock
-        run: |
-          uv run stock-detect-risk --data-dir ./data --send-lark
+      # - name: Detect risk stock
+      #   run: |
+      #     uv run stock-detect-risk --data-dir ./data --send-lark
 
       - name: Select pool stock (qsgc/ztgc)
         run: |

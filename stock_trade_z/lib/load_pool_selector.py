@@ -16,8 +16,6 @@ def load_pool_selectors() -> dict[str, Any]:
     result: dict[str, Any] = {}
 
     for cfg in entries:
-        if cfg.get("activate") is False:
-            continue
         cls_name = cfg.get("class")
         if not cls_name:
             continue

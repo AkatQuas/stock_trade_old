@@ -68,14 +68,3 @@ def build_risk_report_md(
         lines.append(f"- 风险项 ({len(reasons)}): {', '.join(reasons)}")
         lines.append("")
     return "\n".join(lines).strip()
-
-
-def build_quant_report_md(
-    candidates: list[dict],
-    pick_date: str,
-    stocklist: list,
-    suggestion: dict | None = None,
-) -> str:
-    from stock_trade_z.quant.report import build_quant_report_md as _build
-
-    return _build(candidates, pick_date, stocklist, suggestion)

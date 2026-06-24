@@ -12,7 +12,6 @@ from stock_trade_z.lib.llm_context import build_pick_records
 from stock_trade_z.lib.load_selector import load_selectors
 from stock_trade_z.lib.load_stocklist import load_total_stocklist
 from stock_trade_z.lib.logger import get_logger
-from stock_trade_z.lib.time import get_today_name
 
 logger = get_logger("select")
 
@@ -77,8 +76,6 @@ def main():
             )
         else:
             logger.info("============ ❌ ❌ [%s] 无结果 =======\n\n", alias)
-
-    logger.info("🤖 选股结束，下次再来。 %s 🏖️️ 🏖️\n", get_today_name())
 
     llm_section = None
     if args.llm_analyze and all_results:

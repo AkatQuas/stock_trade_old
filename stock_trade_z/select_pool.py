@@ -12,7 +12,6 @@ from stock_trade_z.lib.llm_context import build_pick_records
 from stock_trade_z.lib.load_pool_selector import load_pool_selectors
 from stock_trade_z.lib.load_stocklist import load_total_stocklist
 from stock_trade_z.lib.logger import get_logger
-from stock_trade_z.lib.time import get_today_name
 from stock_trade_z.lib.trend_context import TrendContext, load_trend_context
 
 logger = get_logger("select")
@@ -42,7 +41,7 @@ def main() -> None:
     p.add_argument(
         "--llm-analyze", action="store_true", help="DeepSeek 排序复盘（需 DEEPSEEK_API_KEY）"
     )
-    p.add_argument("--llm-max", type=int, default=20, help="送入 LLM 的最大标的数")
+    p.add_argument("--llm-max", type=int, default=50, help="送入 LLM 的最大标的数")
     args = p.parse_args()
 
     if not args.data_dir.exists():
@@ -99,8 +98,6 @@ def main() -> None:
             logger.info("%s %s %s", sym, info.get("name", ""), _pool_tags(trend_ctx, sym))
 
         all_results.append({"selector": alias, "count": len(picks), "stocks": stocks})
-
-    logger.info("🤖 股池选股结束。 %s\n", get_today_name())
 
     llm_section = None
     if args.llm_analyze and all_results:

@@ -8,13 +8,13 @@
 
 ---
 
-# Z哥战法的 Python 实现（更新版）
+# Z哥战法的 Python 实现
 
-> **更新时间：2025-12-26** –
+> **更新时间：2026-06-17**
 >
-> 新增 **BigBullishVolumeSelector（暴力K战法）**：用于捕捉放量启动、贴近短线均值的强势阳线；
-
-##
+> - 选股策略统一由 `config/selector.config.json` 的 **`selectors`** 列表驱动（Z 战法 + B1/砖型图 + 量化因子 + K线图形评分，共 17 个）
+> - `stock-select` 可选 **`--llm-analyze`**（DeepSeek 对全部初选并集复盘排序）
+> - 每日 CI：`Selector → LLM 复盘 → 飞书`
 
 ## 目录
 
@@ -27,6 +27,7 @@
   - [3. 运行选股](#3-运行选股)
   - [4. 检查单只股票](#4-检查单只股票)
   - [5. 添加股票到优选列表](#5-添加股票到优选列表)
+- [策略一览](#策略一览)
 - [内置策略（Selector）](#内置策略selector)
   - [1. BBIKDJSelector（少妇战法）](#1-bbikdjselector少妇战法)
   - [2. SuperB1Selector（SuperB1战法）](#2-superb1selectorsuperb1战法)
@@ -35,6 +36,8 @@
   - [5. MA60CrossVolumeWaveSelector（上穿60放量战法）](#5-ma60crossvolumewaveselector上穿60放量战法)
   - [6. BigBullishVolumeSelector（暴力K战法）](#6-bigbullishvolumeselector暴力k战法)
 - [项目结构](#项目结构)
+- [选股机制](#选股机制)
+- [Risk Selectors（风险检测）](#risk-selectors-风险检测)
 - [常见问题](#常见问题)
 
 ---
@@ -74,16 +77,16 @@ uv run pre-commit run --all-files  # 手动全量跑一遍
 
 **CLI 入口（`uv run` 后可直接调用）：**
 
-| 命令 | 说明 |
-|------|------|
-| `stock-fetch-list` | 拉取全市场股票列表 |
-| `stock-fetch-kline` | 下载日线 K 线 CSV（TickFlow） |
-| `stock-fetch-trend` | 拉取智图强势股/涨停股池快照 |
+| 命令                     | 说明                                         |
+| ------------------------ | -------------------------------------------- |
+| `stock-fetch-list`       | 拉取全市场股票列表                           |
+| `stock-fetch-kline`      | 下载日线 K 线 CSV（TickFlow）                |
+| `stock-fetch-trend`      | 拉取智图强势股/涨停股池快照                  |
 | `stock-fetch-pool-kline` | 下载股池标的 K 线（TickFlow → `data-pool/`） |
-| `stock-select` | 批量选股（正常战法） |
-| `stock-select-pool` | 股池选股（`pool_selector.config.json`） |
-| `stock-detect-risk` | 批量风险检测 |
-| `stock-check` | 单只股票战法检查 |
+| `stock-select`           | 批量选股（正常战法）                         |
+| `stock-select-pool`      | 股池选股（`pool_selector.config.json`）      |
+| `stock-detect-risk`      | 批量风险检测                                 |
+| `stock-check`            | 单只股票战法检查                             |
 
 > 关键依赖：`pandas`, `tqdm`, `tushare`, `baostock`, `numpy`, `scipy`。
 
@@ -91,15 +94,15 @@ uv run pre-commit run --all-files  # 手动全量跑一遍
 
 选股 / 风控 / 股池选股支持 `--send-lark`：在飞书云文档中生成 Markdown 报告，再由机器人发送文档链接。每日 GitHub Actions 工作流使用相同配置。需要准备：
 
-| 变量 | 说明 |
-|------|------|
-| `TUSHARE_TOKEN` | [TuShare](https://tushare.pro/user/token) 股票列表 Token |
-| `ZHITU_TOKEN` | [智图 API](https://www.zhituapi.com/get-free-cert.html) 股池快照（qsgc/ztgc） |
-| `LARK_APP_ID` | [飞书开放平台](https://open.feishu.cn/app) 应用 App ID |
-| `LARK_SECRET` | 飞书应用 App Secret |
-| `LARK_FOLDER_TOKEN` | 云文档存放文件夹 token（见 [lark-doc.md](./lark-doc.md)） |
-| `ME_UNION_ID` | 接收人的 `union_id`（需 `im:message` + 文档读写权限） |
-| `DEEPSEEK_API_KEY` | 可选；`--llm-analyze` LLM 复盘 |
+| 变量                | 说明                                                                          |
+| ------------------- | ----------------------------------------------------------------------------- |
+| `TUSHARE_TOKEN`     | [TuShare](https://tushare.pro/user/token) 股票列表 Token                      |
+| `ZHITU_TOKEN`       | [智图 API](https://www.zhituapi.com/get-free-cert.html) 股池快照（qsgc/ztgc） |
+| `LARK_APP_ID`       | [飞书开放平台](https://open.feishu.cn/app) 应用 App ID                        |
+| `LARK_SECRET`       | 飞书应用 App Secret                                                           |
+| `LARK_FOLDER_TOKEN` | 云文档存放文件夹 token（见 [lark-doc.md](./lark-doc.md)）                     |
+| `ME_UNION_ID`       | 接收人的 `union_id`（需 `im:message` + 文档读写权限）                         |
+| `DEEPSEEK_API_KEY`  | 可选；`--llm-analyze` DeepSeek 排序复盘                                       |
 
 #### 方式一：交互式配置向导（推荐）
 
@@ -206,20 +209,32 @@ uv run stock-fetch-kline \
 
 ### 3. 运行选股
 
-批量对股票池执行选股策略，输出符合条件的股票。
+批量对股票池执行 `selector.config.json` 中配置的全部策略，输出符合条件的股票。
 
 ```bash
 uv run stock-select --data-dir ./data --date 2025-09-10
+```
+
+生产 / CI 推荐（含飞书、LLM 复盘）：
+
+```bash
+uv run stock-select \
+  --data-dir ./data \
+  --send-lark \
+  --llm-analyze
 ```
 
 > `--date` 可省略，默认取数据中的最后交易日。
 
 **参数说明**
 
-| 参数         | 默认值         | 说明        |
-| ------------ | -------------- | ----------- |
-| `--data-dir` | 必填           | K线行情目录 |
-| `--date`     | 数据最后交易日 | 选股交易日  |
+| 参数            | 默认值         | 说明                                      |
+| --------------- | -------------- | ----------------------------------------- |
+| `--data-dir`    | 必填           | K 线行情目录                              |
+| `--date`        | 数据最后交易日 | 选股交易日                                |
+| `--send-lark`   | 关闭           | 生成飞书云文档并推送链接                  |
+| `--llm-analyze` | 关闭           | DeepSeek 对初选结果排序复盘（需 API Key） |
+| `--llm-max`     | `20`           | 送入 LLM 的最大标的数                     |
 
 ### 4. 检查单只股票
 
@@ -255,6 +270,40 @@ uv run python stock_trade_z/update_to_goodlist.py \
 
 ---
 
+## 策略一览
+
+所有策略在 **`config/selector.config.json`** 的 `selectors` 数组中定义，**全部启用**（无 `activate` 开关）。默认实现模块为 `lib/selector.py`；跨模块策略通过 `"module"` 字段指定。
+
+| 别名           | 类                               | 模块                 | 类别     |
+| -------------- | -------------------------------- | -------------------- | -------- |
+| 少妇战法       | `BBIKDJSelector`                 | `selector`           | Z 战法   |
+| 黄金坑战法     | `GoldPitSelector`                | `selector`           | Z 战法   |
+| 企稳战法       | `SupportLevelSelector`           | `selector`           | Z 战法   |
+| SuperB1战法    | `SuperB1Selector`                | `selector`           | Z 战法   |
+| 补票战法       | `BBIShortLongSelector`           | `selector`           | Z 战法   |
+| 填坑战法       | `PeakKDJSelector`                | `selector`           | Z 战法   |
+| 上穿60放量战法 | `MA60CrossVolumeWaveSelector`    | `selector`           | Z 战法   |
+| 暴力K战法      | `BigBullishVolumeSelector`       | `selector`           | Z 战法   |
+| 均值突破战法   | `MACrossSelector`                | `selector`           | Z 战法   |
+| B1战法         | `B1Selector`                     | `pipeline_selectors` | 量化管线 |
+| 砖型图战法     | `BrickChartSelector`             | `pipeline_selectors` | 量化管线 |
+| 动量因子       | `MomentumSelector`               | `quant_selectors`    | 量化因子 |
+| MACD金叉       | `MACDGoldenCrossSelector`        | `quant_selectors`    | 量化因子 |
+| 布林均值回归   | `BollingerMeanReversionSelector` | `quant_selectors`    | 量化因子 |
+| 唐奇安突破     | `DonchianBreakoutSelector`       | `quant_selectors`    | 量化因子 |
+| 双均线金叉     | `DualMAGoldenCrossSelector`      | `quant_selectors`    | 量化因子 |
+| K线图形评分    | `ChartScoreSelector`             | `chart_score`        | 量化因子 |
+
+**B1战法**（`pipeline_selectors`）：KDJ 低位分位 + 知行线 + 周线多头排列 + 最大量日非阴线；需足够历史 K 线（`zx_m4=114` 时需 ≥114 根）。
+
+**砖型图战法**（`pipeline_selectors`）：砖型图形态 + 知行线 + 周线多头；偏趋势启动捕捉。
+
+**K线图形评分**（`chart_score`）：对全市场扫描，K 线四维度纯计算加权（趋势/位置/量价/异动），`total_score ≥ pass_threshold`（默认 3.7）即命中；与其他 selector 无特殊耦合。
+
+新增策略：在 `selectors` 中追加条目，必要时指定 `"module"`，实现类需提供 `select(date, data) -> list[str]`。
+
+---
+
 ## 内置策略（Selector）
 
 > **提示**：文中“窗口”均指交易日数量。实际实现均已替换为最新代码逻辑。
@@ -276,7 +325,6 @@ uv run python stock_trade_z/update_to_goodlist.py \
 {
   "class": "BBIKDJSelector",
   "alias": "少妇战法",
-  "activate": true,
   "params": {
     "j_threshold": 15,
     "bbi_min_window": 20,
@@ -306,7 +354,6 @@ uv run python stock_trade_z/update_to_goodlist.py \
 {
   "class": "SuperB1Selector",
   "alias": "SuperB1战法",
-  "activate": true,
   "params": {
     "lookback_n": 10,
     "close_vol_pct": 0.02,
@@ -344,7 +391,6 @@ uv run python stock_trade_z/update_to_goodlist.py \
 {
   "class": "BBIShortLongSelector",
   "alias": "补票战法",
-  "activate": true,
   "params": {
     "n_short": 5,
     "n_long": 21,
@@ -374,7 +420,6 @@ uv run python stock_trade_z/update_to_goodlist.py \
 {
   "class": "PeakKDJSelector",
   "alias": "填坑战法",
-  "activate": true,
   "params": {
     "j_threshold": 10,
     "max_window": 120,
@@ -401,7 +446,6 @@ uv run python stock_trade_z/update_to_goodlist.py \
 {
   "class": "MA60CrossVolumeWaveSelector",
   "alias": "上穿60放量战法",
-  "activate": true,
   "params": {
     "lookback_n": 25,
     "vol_multiple": 1.8,
@@ -456,7 +500,6 @@ uv run python stock_trade_z/update_to_goodlist.py \
 {
   "class": "BigBullishVolumeSelector",
   "alias": "暴力K战法",
-  "activate": true,
   "params": {
     "up_pct_threshold": 0.06,
     "upper_wick_pct_max": 0.02,
@@ -485,7 +528,7 @@ uv run python stock_trade_z/update_to_goodlist.py \
 │  └── settings.json                  # 编辑器设置
 │
 ├── config/                           # 策略与风控配置（与代码分离）
-│  ├── selector.config.json           # 选股策略（selectors + quant_selectors）
+│  ├── selector.config.json           # 选股策略（统一 selectors 列表）
 │  ├── pool_selector.config.json      # 股池选股策略
 │  └── risk.config.json               # 风险检测策略
 │
@@ -502,12 +545,16 @@ uv run python stock_trade_z/update_to_goodlist.py \
 │  └── lib/                           # 内部工具模块
 │     ├── ts_pro_api.py               # Tushare API 封装
 │     ├── selector.py                 # Z 哥战法选择器
-│     ├── quant_selectors.py          # 主流量化选股策略
+│     ├── pipeline_selectors.py       # B1 / 砖型图（向量化 Pipeline）
+│     ├── quant_selectors.py          # 主流量化因子选择器
+│     ├── chart_score.py              # K 线四维度图形评分 selector
 │     ├── risk_selectors.py           # 风险检测选择器
-│     ├── registry.py                 # JSON 配置加载公共逻辑
+│     ├── registry.py                 # JSON 配置加载（支持 per-entry module）
 │     ├── fetch_data.py               # 数据抓取工具
 │     ├── load_selector.py            # 选择器加载工具
 │     ├── load_stocklist.py           # 股票列表加载工具
+│     ├── llm_analyze.py              # DeepSeek 复盘
+│     ├── lark_report.py              # 选股报告 Markdown 拼装
 │     ├── logger.py                   # 日志工具
 │     ├── paths.py                    # 路径管理
 │     ├── lark_doc.py                 # 飞书云文档创建与 Markdown 写入
@@ -516,7 +563,7 @@ uv run python stock_trade_z/update_to_goodlist.py \
 │
 ├── data/                             # K 线行情 CSV 输出目录
 ├── stocklist.good.csv                # 优选股票池（经过初步筛选）
-├── .env.example                      # 环境变量示例（Tushare + Lark）
+├── .env.example                      # 环境变量示例（Tushare + Lark + DeepSeek）
 ├── pyproject.toml                    # 项目依赖与 CLI 入口
 ├── uv.lock                           # 锁定依赖版本
 └── log/                              # 运行日志
@@ -524,22 +571,23 @@ uv run python stock_trade_z/update_to_goodlist.py \
 
 ---
 
-## 选股机制（`select_stock.py`）
+## 选股机制
 
-1. **`load_data_folder`**：从 `--data-dir` 读取每只股票的 CSV，归一化 `date`，确定交易日。
-2. **`load_selectors`**：读取 `selector.config.json` 中的 `selectors`（Z 战法）与 `quant_selectors`（主流量化策略），按 `class` 动态实例化并全部运行。
-3. **并行扫描**：每个 Selector 对全市场调用 `select(date, data)`，内部用 `parallel_select_helper` 多进程执行 `_passes_filters(hist)`。
-4. **结果汇总**：命中代码与 `stocklist.total.csv` 合并名称/雪球链接，写日志；`--send-lark` 时创建飞书云文档并推送链接。
+`stock-select` 流水线（`select_stock.py`）：
 
-新增 **quant_selectors**（`lib/quant_selectors.py`，可在配置中 `activate: false` 关闭）：
+```
+load_data_folder → load_selectors → 各 Selector.select()（含 K线图形评分等）
+       ↓
+  [--llm-analyze] DeepSeek 对全部初选并集排序复盘
+       ↓
+  [--send-lark] 飞书云文档 + 机器人通知
+```
 
-| 别名 | 类 | 思路 |
-|------|-----|------|
-| 动量因子 | `MomentumSelector` | ROC + 价格在 MA 上方 |
-| MACD金叉 | `MACDGoldenCrossSelector` | DIF 上穿 DEA，柱状线走强 |
-| 布林均值回归 | `BollingerMeanReversionSelector` | 触及下轨 + RSI 超卖 |
-| 唐奇安突破 | `DonchianBreakoutSelector` | N 日高点突破 + 放量 |
-| 双均线金叉 | `DualMAGoldenCrossSelector` | 短均线上穿长均线 |
+1. **`load_data_folder`**：从 `--data-dir` 读取 CSV，归一化 `date`，确定交易日。
+2. **`load_selectors`**：读取 `selector.config.json` 的 `selectors`，按 `class`（及可选 `module`）实例化，**全部运行**。
+3. **并行扫描**：各 Selector 对全市场（或自身逻辑范围）调用 `select(date, data)`，汇总为 `all_results`。
+4. **LLM 复盘**（`--llm-analyze`）：对全部 selector 初选并集（受 `--llm-max` 限制）调用 DeepSeek 排序与 keep/flag/veto 点评。
+5. **飞书报告**（`--send-lark`）：各策略命中列表 + LLM 段落，创建云文档并推送链接。
 
 ---
 
@@ -570,7 +618,7 @@ uv run stock-detect-risk --data-dir ./data
 
 1. 运行 `uv run python check_setup.py`，确认环境变量与 Lark 测试文档通知均成功。
 2. 确认应用已发布、已开通 `docx:document` / `docx:document:create` / 云文档权限相关 scope，机器人可发消息，且 `ME_UNION_ID` 为接收人 union_id（非 open_id）。
-3. GitHub Actions 需在仓库 Secrets 中配置 `TUSHARE_TOKEN`、`ZHITU_TOKEN`、`LARK_APP_ID`、`LARK_SECRET`、`LARK_FOLDER_TOKEN`、`ME_UNION_ID`（可用 `setup.py` 一次性写入）。
+3. GitHub Actions 需在仓库 Secrets 中配置 `TUSHARE_TOKEN`、`ZHITU_TOKEN`、`DEEPSEEK_API_KEY`（若启用 LLM）、`LARK_APP_ID`、`LARK_SECRET`、`LARK_FOLDER_TOKEN`、`ME_UNION_ID`（可用 `setup.py` 一次性写入）。
 
 **Q1：为什么抓取会“卡住很久”？**
 可能命中 Tushare 频控或网络封禁。脚本检测到典型关键字（如“访问频繁/429/403”）时，会进入**长冷却（默认 600s）** 再重试。
@@ -580,3 +628,6 @@ uv run stock-detect-risk --data-dir ./data
 
 **Q3：创业板/科创板/北交所如何排除？**
 运行时使用 `--exclude-boards gem star bj`，或按需选择其一/其二。
+
+**Q4：B1 / 砖型图为什么经常 0 结果？**
+条件较严，且 B1 的知行线 `zx_m4=114` 需要单股至少约 114 根 K 线；本地若只抓了较短区间会算出 NaN。CI 从 `20240101` 拉数一般足够。可与「少妇战法」等 Z 战法结果对照——后者条件略宽。

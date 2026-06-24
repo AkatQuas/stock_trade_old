@@ -39,7 +39,8 @@ def instantiate_from_module(
     if not cls_name:
         raise ValueError("缺少 class 字段")
 
-    module = importlib.import_module(module_path)
+    mod_path = cfg.get("module", module_path)
+    module = importlib.import_module(mod_path)
     cls = getattr(module, cls_name)
     params = cfg.get("params", {})
     alias = cfg.get("alias", cls_name)
@@ -55,10 +56,10 @@ def load_registry(
     entries = load_json_list(cfg_path, list_key)
     result: dict[str, Any] = {}
     for cfg in entries:
-        if cfg.get("activate") is False:
-            continue
         try:
             alias, instance = instantiate_from_module(module_path, cfg)
+            if alias in result:
+                logger.warning("selector 别名重复，后者覆盖前者: %s", alias)
             result[alias] = instance
         except Exception as e:
             logger.error("跳过配置 %s : %s", cfg.get("alias", cfg.get("class")), e)

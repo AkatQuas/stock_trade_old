@@ -7,7 +7,6 @@ from stock_trade_z.lib.bao_stock_client import BSClient
 from stock_trade_z.lib.load_selector import load_selectors
 from stock_trade_z.lib.load_stocklist import StockCodeDict, load_total_stocklist
 from stock_trade_z.lib.logger import get_logger
-from stock_trade_z.lib.time import get_today_name
 
 logger = get_logger("check")
 
@@ -78,7 +77,6 @@ def main() -> None:
     # 单次运行模式
     if args.symbol:
         check_symbol(args.symbol, total, selector_dict)
-        logger.info("🤖 选股结束，下次再来。 %s 🏖️️ 🏖️\n", get_today_name())
         return
 
     # 交互模式
@@ -107,8 +105,6 @@ def main() -> None:
         except Exception as e:
             logger.error("❌ 处理过程中出错: %s\n", str(e))
             continue
-
-    logger.info("🤖 选股结束，下次再来。 %s 🏖️️ 🏖️\n", get_today_name())
 
 
 if __name__ == "__main__":

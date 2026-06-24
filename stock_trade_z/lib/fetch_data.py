@@ -15,7 +15,7 @@ from .logger import get_logger
 from .time import date_to_ms, get_today_date, validate
 from .utils import looks_like_ip_ban, random_sleep_50_to_150ms, sleep_progress
 
-BATCH_SIZE = 10
+BATCH_SIZE = 12
 BATCH_GAP_SECONDS = 65
 MAX_RETRIES = 3
 # Liquid A-share used to probe whether the market traded on a given day.
